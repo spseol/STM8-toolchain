@@ -1,19 +1,25 @@
 #include "swspi.h"
 
-#define CS_L GPIO_WriteLow(CS_PORT,CS_PIN)
-#define CS_H GPIO_WriteHigh(CS_PORT,CS_PIN)
-#define CLK_L GPIO_WriteLow(CLK_PORT,CLK_PIN)
-#define	CLK_H GPIO_WriteHigh(CLK_PORT,CLK_PIN)
-#define DIN_L GPIO_WriteLow(DIN_PORT,DIN_PIN)
-#define DIN_H GPIO_WriteHigh(DIN_PORT,DIN_PIN)
+#define HIGH(BAGR) GPIO_WriteHigh(SWSPI_##BAGR##_PORT, SWSPI_##BAGR##_PIN)
+#define LOW(BAGR)  GPIO_WriteLow(SWSPI_##BAGR##_PORT, SWSPI_##BAGR##_PIN)
 
-#define SET(BAGR) GPIO_WriteHigh(BAGR##_PORT, BAGR##_PIN)
-#define CLR(BAGR)  GPIO_WriteLow(BAGR##_PORT, BAGR##_PIN)
+uint8_t max7219digits[10] = {
+    0b01111110,  // 0
+    0b00110000,  // 1
+    0b01101101,  // 2
+    0b01111001,  // 3
+    0b00110011,  // 4
+    0b01011011,  // 5
+    0b01011111,  // 6
+    0b01110000,  // 7
+    0b01111111,  // 8
+    0b01111011,  // 9
+};
 
 void swspi_init(void){
-GPIO_Init(CS_PORT,CS_PIN,GPIO_MODE_OUT_PP_HIGH_FAST);
-GPIO_Init(CLK_PORT,CLK_PIN,GPIO_MODE_OUT_PP_LOW_FAST);
-GPIO_Init(DIN_PORT,DIN_PIN,GPIO_MODE_OUT_PP_LOW_FAST);
+GPIO_Init(SWSPI_CS_PORT,SWSPI_CS_PIN,GPIO_MODE_OUT_PP_HIGH_FAST);
+GPIO_Init(SWSPI_CLK_PORT,SWSPI_CLK_PIN,GPIO_MODE_OUT_PP_LOW_FAST);
+GPIO_Init(SWSPI_DIN_PORT,SWSPI_DIN_PIN,GPIO_MODE_OUT_PP_LOW_FAST);
 }
 
 // Odesílá 16bit dat MSB first, SPI mode, sama provádí manipulaci s CS
@@ -21,18 +27,18 @@ void swspi_tx16(uint16_t data)
 {
     uint16_t maska = 1 << 15;
 
-    CS_L;
+    HIGH(CS);
     while (maska) {
         if (maska & data) {
-            DIN_H;
+            HIGH(DIN);
         } else {
-            DIN_L;
+            LOW(DIN);
         }
-        CLK_H;
+        HIGH(CLK); 
         maska = maska >> 1;
-        CLK_L;
+        LOW(CLK);
     }
-    CS_H;
+    HIGH(CS);
 }
 
 
@@ -40,35 +46,35 @@ void swspi_tx2x8(uint8_t address, uint8_t data)
 {
     uint16_t mask ;
 
-    CLR(CS);                    // začánám visílat
+    LOW(CS);                    // začánám visílat
 
     // adresa
     mask = 1 << 7;
     while (mask) {
-        CLR(CLK);
+        LOW(CLK);
         if (address & mask) {
-            SET(DIN);
+            HIGH(DIN);
         } else {
-            CLR(DIN);
+            LOW(DIN);
         }
-        SET(CLK);
+        HIGH(CLK);
         mask >>= 1;
-        CLR(CLK);
+        LOW(CLK);
     }
 
     // data 
     mask = 1 << 7;
     while (mask) {
-        CLR(CLK);
+        LOW(CLK);
         if (data & mask) {
-            SET(DIN);
+            HIGH(DIN);
         } else {
-            CLR(DIN);
+            LOW(DIN);
         }
-        SET(CLK);
+        HIGH(CLK);
         mask >>= 1;
-        CLR(CLK);
+        LOW(CLK);
     }
 
-    SET(CS);                    // končím vysílán
+    HIGH(CS);                    // končím vysílán
 }
