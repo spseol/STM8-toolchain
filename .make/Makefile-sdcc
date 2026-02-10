@@ -274,8 +274,8 @@ openocd:
 gdb: $(TARGET_ELF)
 	+stm8-gdb --tui $^
 
-gdbgui: $(TARGET_ELF)
-	+gdbgui -p 48777 --host localhost -g stm8-gdb --args $^
+cgdb: $(TARGET_ELF)
+	cgdb -d stm8-gdb -- $^
 
 switch-device: clean
 	+bash .make/switch_device.sh
