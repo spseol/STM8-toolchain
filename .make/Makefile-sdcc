@@ -305,3 +305,5 @@ spl-renew:
 tree:
 	+bash .make/tree.sh
 
+docs-download:
+	+bash .make/docs-download.sh $(DEVICE)
