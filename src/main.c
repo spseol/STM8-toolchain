@@ -13,10 +13,14 @@
 #define BTN_PORT GPIOB
 #define BTN_PIN  GPIO_PIN_7
 #endif
-// Dero Board
+// Blue-Board, Dero-Board
 #ifdef STM8S103
-#define LED_PORT GPIOD
-#define LED_PIN  GPIO_PIN_4
+//   Dero-Board
+/*#define LED_PORT GPIOD*/
+/*#define LED_PIN  GPIO_PIN_4*/
+//   Blue-Board
+#define LED_PORT GPIOB
+#define LED_PIN  GPIO_PIN_5
 #endif
 // Discovery Board
 #ifdef STM8S105
