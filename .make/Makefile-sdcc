@@ -234,8 +234,8 @@ $(OUTPUT_SPL_DIR_ELF):
 	$(MKDIR) -p $@
 
 
-compile_commands.json: $(PRJ_SRC_DIR) $(SPL_SRC_DIR)
-	$(PYTHON) .make/compile_database_generator.py $(DEVICE)
+compile_commands.json: $(PRJ_SRC_DIR) $(SPL_SRC_DIR) Makefile
+	$(PYTHON) .make/compile_database_generator.py $(DEVICE) $(CC_ROOT)
 
 .PHONY: clean clean-spl-objects clean-spl-lib  cleanall
 

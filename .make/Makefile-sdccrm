@@ -182,6 +182,6 @@ tree::
 	+bash .make/tree.sh
 
 compile_commands.json: src/ ../SPL/
-	$(PYTHON) .make/compile_database_generator.py $(DEVICE)
+	$(PYTHON) .make/compile_database_generator.py $(DEVICE) $(CC_ROOT)
 
 .PHONY: clean

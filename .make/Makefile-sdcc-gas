@@ -199,7 +199,7 @@ $(SDCC_LIB): $(SDCC_LIB_OBJECTS)
 endif
 
 compile_commands.json: $(PRJ_SRC_DIR) $(SPL_SRC_DIR)
-	$(PYTHON) .make/compile_database_generator.py $(DEVICE)
+	$(PYTHON) .make/compile_database_generator.py $(DEVICE) $(CC_ROOT)
 
 .PHONY: clean clean-spl-lib clean-spl-objects clean-sdcc-lib clean-sdcc-objects 
 .PHONY: cleanall clean-objects 
