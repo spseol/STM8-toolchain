@@ -126,7 +126,9 @@ SPL_ASSRM := $(addprefix $(OUTPUT_DIR)/, $(SPL_SOURCE:.c=.asmrm))
 INCLUDE = -I$(PRJ_INC_DIR) -I$(SPL_INC_DIR) 
 
 # collect all source directories
-VPATH=$(PRJ_SRC_DIR):$(SPL_SRC_DIR)
+# VPATH is intentionally disabled: explicit source paths in pattern rules make it
+# redundant and prevent accidental shadowing by same-named files in the project root.
+# VPATH=$(PRJ_SRC_DIR):$(SPL_SRC_DIR)
 
 
 ihx:: $(TARGET).ihx
@@ -144,7 +146,9 @@ $(TARGET).ihx: $(PRJ_ASSMS) $(SPL_ASSMS)
 	@echo 
 
 
-$(OUTPUT_DIR)/%.asm: %.c Makefile exclude_reference $(PRJ_INCS) | $(OUTPUT_DIR)
+$(OUTPUT_DIR)/%.asm: $(PRJ_SRC_DIR)/%.c Makefile exclude_reference $(PRJ_INCS) | $(OUTPUT_DIR)
+	+$(CC) $(CFLAGS) -D$(DEVICE) $(INCLUDE) -DSKIP_TRAPS=$(SKIP_TRAPS) -c $< -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
+$(OUTPUT_DIR)/%.asm: $(SPL_SRC_DIR)/%.c Makefile exclude_reference $(PRJ_INCS) | $(OUTPUT_DIR)
 	+$(CC) $(CFLAGS) -D$(DEVICE) $(INCLUDE) -DSKIP_TRAPS=$(SKIP_TRAPS) -c $< -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 
 $(OUTPUT_DIR):

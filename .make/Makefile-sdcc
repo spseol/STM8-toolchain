@@ -173,7 +173,9 @@ SPL_OBJECTS_ELF := $(addprefix $(OUTPUT_SPL_DIR_ELF)/, $(SPL_SOURCE:.c=.rel))
 INCLUDE = -I$(PRJ_INC_DIR) -I$(SPL_INC_DIR) 
 
 # collect all source directories
-VPATH=$(PRJ_SRC_DIR):$(SPL_SRC_DIR)
+# VPATH is intentionally disabled: explicit source paths in pattern rules make it
+# redundant and prevent accidental shadowing by same-named files in the project root.
+# VPATH=$(PRJ_SRC_DIR):$(SPL_SRC_DIR)
 
 .PHONY: ihx elf all
 
@@ -192,16 +194,34 @@ $(TARGET): $(PRJ_OBJECTS)  $(SPLLIB)
 	@$(PYTHON) .make/sizecal.py ./out.ihx
 	@echo
 
-$(OUTPUT_DIR)/%.rel: %.c $(PRJ_INCS) Makefile | $(OUTPUT_DIR) ../SPLSPL
+$(OUTPUT_DIR)/%.rel: $(PRJ_SRC_DIR)/%.c $(PRJ_INCS) Makefile | $(OUTPUT_DIR) ../SPLSPL
 	$(CC) $(CFLAGS) -D$(DEVICE) $(INCLUDE) -DSKIP_TRAPS=$(SKIP_TRAPS) -c $< -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
-$(OUTPUT_DIR_ELF)/%.rel: %.c $(PRJ_INCS) Makefile | $(OUTPUT_DIR_ELF) ../SPLSPL
+$(OUTPUT_DIR_ELF)/%.rel: $(PRJ_SRC_DIR)/%.c $(PRJ_INCS) Makefile | $(OUTPUT_DIR_ELF) ../SPLSPL
 	$(CC) $(CFLAGS) $(FMT_ELF) -D$(DEVICE) $(INCLUDE) -DSKIP_TRAPS=$(SKIP_TRAPS) -c $< -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 
-$(OUTPUT_SPL_DIR)/%.rel: %.c $(PRJ_INCS)  | $(OUTPUT_SPL_DIR) ../SPLSPL
+$(OUTPUT_SPL_DIR)/%.rel: $(SPL_SRC_DIR)/%.c $(PRJ_INCS)  | $(OUTPUT_SPL_DIR) ../SPLSPL
 	$(CC) $(CFLAGS) -D$(DEVICE) $(INCLUDE) -DSKIP_TRAPS=$(SKIP_TRAPS) -c $< -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
-$(OUTPUT_SPL_DIR_ELF)/%.rel: %.c $(PRJ_INCS)  | $(OUTPUT_SPL_DIR_ELF) ../SPLSPL
+$(OUTPUT_SPL_DIR_ELF)/%.rel: $(SPL_SRC_DIR)/%.c $(PRJ_INCS)  | $(OUTPUT_SPL_DIR_ELF) ../SPLSPL
 	$(CC) $(CFLAGS) $(FMT_ELF) -D$(DEVICE) $(INCLUDE) -DSKIP_TRAPS=$(SKIP_TRAPS) -c $< -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 
+
+# Check if the SPL library was built with a different SDCC version.
+# Evaluated at parse time so cleanup happens before the ifeq below,
+# guaranteeing automatic recompilation when the compiler version changes.
+SDCC_VERSION     := $(shell $(CC) --version 2>&1 | grep -oP '\d+\.\d+\.\d+ #\d+')
+SPLLIB_VER_STAMP := $(SPLLIB).sdcc_ver
+ifneq ($(wildcard $(SPLLIB_VER_STAMP)),)
+  SPLLIB_BUILT_VER := $(shell cat $(SPLLIB_VER_STAMP))
+  ifneq ($(SPLLIB_BUILT_VER),$(SDCC_VERSION))
+    $(info *** SPL library was built with a different SDCC version:)
+    $(info ***   stored  : $(SPLLIB_BUILT_VER))
+    $(info ***   current : $(SDCC_VERSION))
+    $(info *** Removing build artifacts — everything will be recompiled.)
+    $(shell rm -rf "$(OUTPUT_DIR)" "$(OUTPUT_DIR_ELF)")
+    $(shell rm -rf "$(OUTPUT_SPL_DIR)" "$(OUTPUT_SPL_DIR_ELF)")
+    $(shell rm -f  "$(SPLLIB)" "$(SPLLIB_ELF)" "$(SPLLIB_VER_STAMP)")
+  endif
+endif
 
 ifeq ($(wildcard $(SPLLIB)),)
 $(SPLLIB): $(SPL_OBJECTS) | $(OUTPUT_SPL_DIR)
@@ -213,6 +233,7 @@ $(SPLLIB): $(SPL_OBJECTS) | $(OUTPUT_SPL_DIR)
     done;
 	@echo -e "\nCreating library $(SPLLIB)"
 	$(AR) -rc $(SPLLIB) @objects.list
+	$(CC) --version 2>&1 | grep -oP '\d+\.\d+\.\d+ #\d+' > $(SPLLIB_VER_STAMP)
 	@rm -f objects.list
 endif
 
@@ -256,6 +277,7 @@ clean-spl-objects:
 clean-spl-lib: clean-spl-objects
 	rm -f $(SPLLIB)
 	rm -f $(SPLLIB_ELF)
+	rm -f $(SPLLIB_VER_STAMP)
 
 cleanall: clean-spl-lib clean 
 

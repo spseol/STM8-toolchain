@@ -141,7 +141,9 @@ SDCC_LIB_OBJECTS := $(addprefix $(OUTPUT_SDCC_LIBDIR)/, $(SDCC_LIB_SOURCE:.c=.o)
 INCLUDE = -I$(PRJ_INC_DIR) -I$(SPL_INC_DIR) 
 
 # collect all source directories
-VPATH=$(PRJ_SRC_DIR):$(SPL_SRC_DIR):$(SDCC_LIB_SRC_DIR)
+# VPATH is intentionally disabled: explicit source paths in pattern rules make it
+# redundant and prevent accidental shadowing by same-named files in the project root.
+# VPATH=$(PRJ_SRC_DIR):$(SPL_SRC_DIR):$(SDCC_LIB_SRC_DIR)
 
 # Source dependencies:
 #DEPS = $(OBJECTS:.o=.d)
@@ -167,19 +169,19 @@ $(TARGET).ihx: $(TARGET).elf
 	@echo
 
 
-$(OUTPUT_DIR)/%.d: %.c $(PRJ_INCS) Makefile | $(OUTPUT_DIR) ../SPL ../SPLSPL
+$(OUTPUT_DIR)/%.d: $(PRJ_SRC_DIR)/%.c $(PRJ_INCS) Makefile | $(OUTPUT_DIR) ../SPL ../SPLSPL
 	$(CC) -c $< $(CFLAGS) -D$(DEVICE) $(INCLUDE) -MM > $@
-$(OUTPUT_DIR)/%.o: %.c $(OUTPUT_DIR)/%.d
+$(OUTPUT_DIR)/%.o: $(PRJ_SRC_DIR)/%.c $(OUTPUT_DIR)/%.d
 	$(CC) -c $< $(CFLAGS) -D$(DEVICE) $(INCLUDE)  -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 
-$(OUTPUT_SPL_LIBDIR)/%.d: %.c | $(OUTPUT_SPL_LIBDIR)  ../SPL ../SPLSPL
+$(OUTPUT_SPL_LIBDIR)/%.d: $(SPL_SRC_DIR)/%.c | $(OUTPUT_SPL_LIBDIR)  ../SPL ../SPLSPL
 	$(CC) -c $< $(CFLAGS) -D$(DEVICE) $(INCLUDE) -MM > $@
-$(OUTPUT_SPL_LIBDIR)/%.o: %.c $(OUTPUT_SPL_LIBDIR)/%.d
+$(OUTPUT_SPL_LIBDIR)/%.o: $(SPL_SRC_DIR)/%.c $(OUTPUT_SPL_LIBDIR)/%.d
 	$(CC) -c $< $(CFLAGS) -D$(DEVICE) $(INCLUDE)  -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 
-$(OUTPUT_SDCC_LIBDIR)/%.d: %.c | $(OUTPUT_SDCC_LIBDIR)
+$(OUTPUT_SDCC_LIBDIR)/%.d: $(SDCC_LIB_SRC_DIR)/%.c | $(OUTPUT_SDCC_LIBDIR)
 	$(CC) -c $< $(CFLAGS) -D$(DEVICE) $(INCLUDE) -MM > $@
-$(OUTPUT_SDCC_LIBDIR)/%.o: %.c $(OUTPUT_SDCC_LIBDIR)/%.d
+$(OUTPUT_SDCC_LIBDIR)/%.o: $(SDCC_LIB_SRC_DIR)/%.c $(OUTPUT_SDCC_LIBDIR)/%.d
 	$(CC) -c $< $(CFLAGS) -D$(DEVICE) $(INCLUDE)  -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 
 $(OUTPUT_DIR):
@@ -189,9 +191,28 @@ $(OUTPUT_SPL_LIBDIR):
 $(OUTPUT_SDCC_LIBDIR):
 	$(MKDIR) -p $(OUTPUT_SDCC_LIBDIR)
 
+# Check if the SPL library was built with a different SDCC version.
+# Evaluated at parse time so cleanup happens before the ifeq below,
+# guaranteeing automatic recompilation when the compiler version changes.
+SDCC_VERSION    := $(shell $(CC) --version 2>&1 | grep -oP '\d+\.\d+\.\d+ #\d+')
+SPL_LIB_VER_STAMP := $(SPL_LIB).sdcc_ver
+ifneq ($(wildcard $(SPL_LIB_VER_STAMP)),)
+  SPL_LIB_BUILT_VER := $(shell cat $(SPL_LIB_VER_STAMP))
+  ifneq ($(SPL_LIB_BUILT_VER),$(SDCC_VERSION))
+    $(info *** SPL library was built with a different SDCC version:)
+    $(info ***   stored  : $(SPL_LIB_BUILT_VER))
+    $(info ***   current : $(SDCC_VERSION))
+    $(info *** Removing build artifacts — everything will be recompiled.)
+    $(shell rm -rf "$(OUTPUT_DIR)")
+    $(shell rm -rf "$(OUTPUT_SPL_LIBDIR)")
+    $(shell rm -f  "$(SPL_LIB)" "$(SPL_LIB_VER_STAMP)")
+  endif
+endif
+
 ifeq ($(wildcard $(SPL_LIB)),)
-$(SPL_LIB): $(SPL_OBJECTS) 
+$(SPL_LIB): $(SPL_OBJECTS)
 	stm8-ar -rc $(SPL_LIB) $^
+	$(CC) --version 2>&1 | grep -oP '\d+\.\d+\.\d+ #\d+' > $(SPL_LIB_VER_STAMP)
 endif
 ifeq ($(wildcard $(SDCC_LIB)),)
 $(SDCC_LIB): $(SDCC_LIB_OBJECTS)
@@ -213,6 +234,7 @@ clean-spl-objects:
 	rm -Rf $(OUTPUT_SPL_LIBDIR)
 clean-spl-lib: clean-spl-objects
 	rm -f $(SPL_LIB)
+	rm -f $(SPL_LIB_VER_STAMP)
 
 clean-sdcc-objects:
 	rm -Rf $(OUTPUT_SDCC_LIBDIR)
