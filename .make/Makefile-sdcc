@@ -345,7 +345,7 @@ switch-sdccrm: clean
 	tar -C .. --transform='s%spl-main/%%' -xzf ../SPL.tgz spl-main/SPLSPL/
 	@printf "***********************************************************\n*  SPL byla rozbalena. Možná je třeba znovu spusti make   *\n***********************************************************\n"
 
-.PHONY: spl spl-renew tree
+.PHONY: spl spl-renew tree lib
 
 spl: ../SPL ../SPLSPL
 
@@ -358,3 +358,6 @@ tree:
 
 docs-download:
 	+bash .make/docs-download.sh $(DEVICE)
+
+lib:
+	@bash .make/lib-mv.sh
