@@ -318,7 +318,7 @@ reflash: clean
 	$(MAKE) flash
 
 
-.PHONY: openocd debug switch-sdccrm switch-sdcc-gas 
+.PHONY: openocd debug
 
 openocd:
 	+$(OPENOCD) -c "init" -c "reset halt"
@@ -331,11 +331,6 @@ cgdb: $(TARGET_ELF)
 
 switch-device: clean
 	+bash .make/switch_device.sh
-
-switch-sdcc-gas: clean
-	$(LN) .make/Makefile-sdcc-gas Makefile || $(CP) .make/Makefile-sdcc-gas Makefile
-switch-sdccrm: clean
-	$(LN) .make/Makefile-sdccrm Makefile || $(CP) .make/Makefile-sdccrm Makefile
 
 ../SPL.tgz:
 	curl https://gitlab.com/spseol/mit-no/spl/-/archive/main/spl-main.tar.gz --output ../SPL.tgz

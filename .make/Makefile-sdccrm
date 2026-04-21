@@ -175,11 +175,6 @@ rebuild:: clean
 reflash:: clean
 	$(MAKE) flash
 
-switch-sdcc:: clean
-	$(LN) .make/Makefile-sdcc Makefile || $(CP) .make/Makefile-sdcc Makefile
-switch-sdcc-gas:: clean
-	$(LN) .make/Makefile-sdcc-gas Makefile || $(CP) .make/Makefile-sdcc-gas Makefile
-
 spl::
 	+bash .make/spl.sh
 tree::

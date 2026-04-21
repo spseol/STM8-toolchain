@@ -1,5 +1,4 @@
-STM8 (SPŠE) toolchain
-==============================
+# STM8 (SPŠE) toolchain
 
 **🇨🇿 Česká verze** | [🇬🇧 English](README.md)
 
@@ -17,45 +16,9 @@ STM8 (SPŠE) toolchain
   * <https://gitlab.com/wykys/stm8-tools>
   * <https://github.com/matejkrenek/stm8-toolchain>
 
-Tři Mejkfaily ....
-------------------------------------
-
-K dispozici jsou celkem tři `Makefile` v adresáři `.make`. Je to proto, že kompilátor
-`SDCC` nedokáže odstranit mrtvý kód. Existují asi tři řešení. To první je
-nejoptimálnější, další dvě řešení jsem tu nechal pro strýčka příhodu. **Když
-poprve zavoláte `make` přepne se toolchain do tohoto nejoptimálnějšího řešení zvaného
-`sdcc`.**
-
-Takže pro výběr Makefile zavoláte:
-
-```zsh
-make 
-# nebo
-make sdcc
-# nebo 
-make sdcc-gas
-# nebo 
-make sdccrm
-```
 
 
-Mezi jednotlivými `Makefile` se potom můžete přepínat:
-
-    make switch-sdcc
-    make switch-sdcc-gas
-    make switch-sdccrm
-
-Přepnutí jen znamená, že se udělá symlink do root-adresáře projektu. Na divných
-systémech, které symlinky neumí (například Windows) se natvrdo kopíruje, takže
-tato operace může být ztrátová. Na normálních systémech (asi všechny, kromě
-Windows) je tato operace bezztrátová.
-
-Pro více detailů se podívejte na
-<https://chytrosti.marrek.cz/stm8oss.html>
-
-
-Použití
---------------
+## Použití
 
 Nejprve je třeba vybrat Makefile. Pokud jste to ještě neudělali, tak zavolejte
 
@@ -104,13 +67,9 @@ endif
 | `make gdbgui` | spustí [gdbgui](https://www.gdbgui.com) (pokud je nainstalované) |
 | `make tree` | zobrazí strom projektu |
 | `make spl-renew` | znovu stáhne SPL knihovny |
-| `make switch-sdcc` | přepne na čistý SDCC Makefile |
-| `make switch-sdcc-gas` | přepne na SDCC-gas Makefile |
-| `make switch-sdccrm` | přepne na SDCCRM Makefile |
 
 
-Závislosti
----------------
+## Závislosti
 
 * [GNU Make](https://www.gnu.org/software/make/)
 * [GNU Bash](https://www.gnu.org/software/bash/) -- ten se na Windows
@@ -127,3 +86,17 @@ Závislosti
 
 [`choco`](https://chocolatey.org/)` install git make vscode mingw`
 
+## Tři Mejkfaily ....
+
+K dispozici jsou celkem tři `Makefile` v adresáři `.make`. Je to proto, že kompilátor
+`SDCC` nedokáže odstranit mrtvý kód. Existují asi tři řešení. To první je
+nejoptimálnější, další dvě řešení jsem tu nechal pro strýčka příhodu. **By Default
+je Makefile nastaven a první nejoptimálnější řešení `sdcc`.**
+Pro více detailů se podívejte na <https://chytrosti.marrek.cz/stm8oss.html>.
+
+```
+$ ls .make/Makefile*
+.make/Makefile-sdcc
+.make/Makefile-sdcc-gas
+.make/Makefile-sdccrm
+```

@@ -1,43 +1,24 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
         {
-            "name": "STM8-gdb",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/build/out.elf",
-            "args": [],
-            "stopAtEntry": true,
+            "name": "gdb-stm8",
+            "type": "gdb",
+            "request": "attach",
+            "executable": "${workspaceRoot}/out.elf",
+            "gdbpath": "stm8-gdb",
+            "remote": true,
+            "target": ":3333",
             "cwd": "${workspaceRoot}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "miDebuggerPath": "stm8-gdb",
-            "setupCommands": [
-                {
-                    "description": "connect to target",
-                    "text": "-target-select extended-remote localhost:3333",
-                    "ignoreFailures": true
-                },
-            ],
-            "logging": {
-                "moduleLoad": true,
-                "trace": true,
-                "engineLogging": true,
-                "programOutput": true,
-                "exceptions": true
-            },
+            "autorun": [
+            ]
         },
         {
             "type": "stm8-debug",
             "request": "launch",
             "name": "stm8-debug",
             "serverType": "stm8-sdcc",
-            "executable": "/home/marek/Programming/STM8/00-vzor_No-SDCC/build-STM8S208/out.elf",
+            "executable": "${workspaceRoot}/out.elf",
             "openOcdConfigs": [
                 "interface/stlink-dap.cfg",
                 "target/stm8s.cfg"

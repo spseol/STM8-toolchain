@@ -263,18 +263,13 @@ rebuild:: clean
 reflash:: clean
 	$(MAKE) flash
 
-.PHONY: openocd debug switch-sdcc switch-sdccrm spl tree
+.PHONY: openocd debug spl tree
 
 openocd:
 	+$(OPENOCD) -c "init" -c "reset halt"
 
 gdb: $(TARGET).elf
 	+stm8-gdb --tui $^
-
-switch-sdcc: clean
-	$(LN) .make/Makefile-sdcc Makefile || $(CP) .make/Makefile-sdcc Makefile
-switch-sdccrm: clean
-	$(LN) .make/Makefile-sdccrm Makefile || $(CP) .make/Makefile-sdccrm Makefile
 
 ../SPL.tgz:
 	curl https://gitlab.com/spseol/mit-no/spl/-/archive/main/spl-main.tar.gz --output ../SPL.tgz

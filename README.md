@@ -15,40 +15,6 @@ STM8 (SPŠE) Toolchain
   * <https://gitlab.com/wykys/stm8-tools>
   * <https://github.com/matejkrenek/stm8-toolchain>
 
-Three Makefiles
-------------------------------------
-
-There are three `Makefile` variants available in the `.make` directory. This is because the
-`SDCC` compiler cannot remove dead code. There are three solutions. The first one is
-the most optimal, the other two solutions are kept just in case. **When you run `make`
-for the first time, the toolchain will switch to the most optimal solution called `sdcc`.**
-
-To select a Makefile, run:
-
-```zsh
-make
-# or
-make sdcc
-# or
-make sdcc-gas
-# or
-make sdccrm
-```
-
-
-You can switch between `Makefile` variants later:
-
-    make switch-sdcc
-    make switch-sdcc-gas
-    make switch-sdccrm
-
-Switching only means creating a symlink to the root directory of the project. On systems
-that don't support symlinks (like Windows), the file is copied instead, so this operation
-may be lossy. On normal systems (pretty much all except Windows), this operation is lossless.
-
-For more details, see
-<https://chytrosti.marrek.cz/stm8oss.html>
-
 
 Usage
 --------------
@@ -100,9 +66,6 @@ endif
 | `make gdbgui` | runs [gdbgui](https://www.gdbgui.com) (if installed) |
 | `make tree` | displays the project tree |
 | `make spl-renew` | re-downloads SPL libraries |
-| `make switch-sdcc` | switches to pure SDCC Makefile |
-| `make switch-sdcc-gas` | switches to SDCC-gas Makefile |
-| `make switch-sdccrm` | switches to SDCCRM Makefile |
 
 
 Dependencies
@@ -122,3 +85,18 @@ Dependencies
 ### On Windows
 
 [`choco`](https://chocolatey.org/)` install git make vscode mingw`
+
+## Three Makefiles
+
+There are three `Makefile` variants available in the `.make` directory. This is because the
+`SDCC` compiler cannot remove dead code. There are three solutions. The first one is
+the most optimal, the other two are kept just in case. **By default the Makefile is set
+to the first and most optimal solution `sdcc`.**
+For more details, see <https://chytrosti.marrek.cz/stm8oss.html>.
+
+```
+$ ls .make/Makefile*
+.make/Makefile-sdcc
+.make/Makefile-sdcc-gas
+.make/Makefile-sdccrm
+```
