@@ -20,22 +20,13 @@
 
 ## Použití
 
-Nejprve je třeba vybrat Makefile. Pokud jste to ještě neudělali, tak zavolejte
-
-    make
-
-Poté je třeba v `Makefile` správně nastavit µprocesor a jeho frekvenci;
+Nejprve je třeba v `Makefile` správně nastavit µprocesor a jeho frekvenci;
 případně cestu k instalaci SDCC, 
 [STVP](https://www.st.com/en/development-tools/stvp-stm8.html).
 
 ```make
 #DEVICE_FLASH=stm8s103f3
 DEVICE_FLASH=stm8s208rb
-
-### STlink version for flash2 target (stm8flash program)
-#STLINK=stlinkv2
-#STLINK=stlink
-STLINK=stlinkv21
 
 F_CPU=16000000
 

@@ -19,22 +19,13 @@ STM8 (SPŠE) Toolchain
 Usage
 --------------
 
-First, you need to select a Makefile. If you haven't done so yet, run:
-
-    make
-
-Then you need to configure the microprocessor and its frequency in the `Makefile`;
+First, you need to configure the microprocessor and its frequency in the `Makefile`;
 optionally the path to SDCC installation, or
 [STVP](https://www.st.com/en/development-tools/stvp-stm8.html).
 
 ```make
 #DEVICE_FLASH=stm8s103f3
 DEVICE_FLASH=stm8s208rb
-
-### STlink version for flash2 target (stm8flash program)
-#STLINK=stlinkv2
-#STLINK=stlink
-STLINK=stlinkv21
 
 F_CPU=16000000
 
