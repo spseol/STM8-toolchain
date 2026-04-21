@@ -208,7 +208,8 @@ $(OUTPUT_SPL_DIR_ELF)/%.rel: $(SPL_SRC_DIR)/%.c $(PRJ_INCS)  | $(OUTPUT_SPL_DIR_
 # Check if the SPL library was built with a different SDCC version.
 # Evaluated at parse time so cleanup happens before the ifeq below,
 # guaranteeing automatic recompilation when the compiler version changes.
-SDCC_VERSION     := $(shell $(CC) --version 2>&1 | grep -oP '\d+\.\d+\.\d+ #\d+')
+HASH             := \#
+SDCC_VERSION     := $(shell $(CC) --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+ $(HASH)[0-9]+' | head -1)
 SPLLIB_VER_STAMP := $(SPLLIB).sdcc_ver
 ifneq ($(wildcard $(SPLLIB_VER_STAMP)),)
   SPLLIB_BUILT_VER := $(shell cat $(SPLLIB_VER_STAMP))
@@ -233,7 +234,7 @@ $(SPLLIB): $(SPL_OBJECTS) | $(OUTPUT_SPL_DIR)
     done;
 	@echo -e "\nCreating library $(SPLLIB)"
 	$(AR) -rc $(SPLLIB) @objects.list
-	$(CC) --version 2>&1 | grep -oP '\d+\.\d+\.\d+ #\d+' > $(SPLLIB_VER_STAMP)
+	$(CC) --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+ $(HASH)[0-9]+' | head -1 > $(SPLLIB_VER_STAMP)
 	@rm -f objects.list
 endif
 
