@@ -41,22 +41,30 @@ endif
 
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;||
 |:---------- |:--------------------------- |
-| `make spl` | downloads and prepares libraries |
+| `make spl` | downloads and prepares SPL libraries |
+| `make spl-renew` | re-downloads SPL libraries |
 | `make` | compiles the project (alias for `make ihx`) |
 | `make ihx` | compiles to Intel HEX format |
 | `make elf` | compiles to ELF format (with debug info) |
 | `make all` | compiles both (ihx and elf) |
-| `make flash` | uploads the program to the chip. On Linux it uses [OpenOCD](https://openocd.org/). On Windows it uses [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) command line version.|
-| `make flash2` | alternative method (uses [stm8flash](https://github.com/vdudouyt/stm8flash)). |
-| `make reflash` | cleans everything and uploads again |
-| `make clean` | deletes everything that was compiled |
+| `make clean` | deletes build output |
+| `make clean-spl-objects` | deletes SPL object files (library stays) |
+| `make clean-spl` | deletes SPL library (forces full SPL rebuild) |
 | `make cleanall` | deletes everything including SPL libraries |
-| `make rebuild` | cleans everything and recompiles |
-| `make openocd` | runs `openocd` for debugging |
-| `make gdb` | runs STM8-gdb |
-| `make gdbgui` | runs [gdbgui](https://www.gdbgui.com) (if installed) |
+| `make rebuild` | cleans everything and recompiles (elf) |
+| `make reflash` | cleans everything and flashes again |
+| `make flash` | uploads ihx to the chip — [OpenOCD](https://openocd.org/) on Linux, [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) on Windows |
+| `make flash-elf` | uploads elf to the chip via OpenOCD |
+| `make flash-ihex` | converts elf to ihex and uploads via OpenOCD |
+| `make stm8flash` | alternative flash method (uses [stm8flash](https://github.com/vdudouyt/stm8flash)) |
+| `make stm8flash-unlock` | removes read protection via stm8flash |
+| `make openocd` | starts OpenOCD for debugging (keeps running, then use `make gdb`) |
+| `make gdb` | starts STM8-gdb in TUI mode |
+| `make cgdb` | starts cgdb with STM8-gdb |
+| `make switch-device` | interactively switches target device in Makefile |
+| `make lib` | interactively selects drivers from `lib/` and moves them to `src/` and `inc/` |
+| `make docs-download` | downloads datasheet/reference manual for the current device |
 | `make tree` | displays the project tree |
-| `make spl-renew` | re-downloads SPL libraries |
 
 
 Dependencies

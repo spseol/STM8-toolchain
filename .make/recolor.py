@@ -23,6 +23,15 @@ def colorized(color):
 
 
 while line := sys.stdin.readline():
+    m = re.search(r"\?ASlink-Warning-Undefined Global '_?(\w+)'", line)
+    if m:
+        symbol = m.group(1)
+        sys.stderr.write(Style.BRIGHT + Fore.RED + Back.BLACK + line.rstrip() + Style.RESET_ALL + "\n")
+        sys.stderr.write(Style.BRIGHT + Fore.YELLOW + Back.BLACK +
+            f"   '{symbol}' is used but not defined —"
+            f" the corresponding source file is probably missing from the project." +
+            Style.RESET_ALL + "\n")
+        continue
     if not re.search("/SPL(-STM8S...)?/", line, re.I):
         line = re.sub(
             r"[\w\d/-_]+(\.c|\.h)(:\d+)?",

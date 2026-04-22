@@ -42,22 +42,30 @@ endif
 
 | příkaz&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;||
 |:---------- |:--------------------------- |
-| `make spl` | stáhne a nachystá knihovny |
+| `make spl` | stáhne a nachystá SPL knihovny |
+| `make spl-renew` | znovu stáhne SPL knihovny |
 | `make` | provede kompilaci (alias pro `make ihx`) |
 | `make ihx` | zkompiluje do Intel HEX formátu |
 | `make elf` | zkompiluje do ELF formátu (s debug informacemi) |
 | `make all` | zkompiluje obojí (ihx i elf) |
-| `make flash` | nahraje program do chipu. Na Linuxu se použije [OpenOCD](https://openocd.org/). Na Windows se použije [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) verze pro příkazový řádek.|
-| `make flash2` | záložní varianta (používá [stm8flash](https://github.com/vdudouyt/stm8flash)). |
-| `make reflash` | smaže vše a znovu nahraje |
-| `make clean` | smaže všechno, co nakompiloval |
+| `make clean` | smaže build výstupy |
+| `make clean-spl-objects` | smaže objektové soubory SPL (zkompilovaná knihovna zůstane) |
+| `make clean-spl` | smaže zkompilovanou SPL knihovnu (vynutí plné přeložení SPL) |
 | `make cleanall` | smaže vše včetně SPL knihoven |
-| `make rebuild` | smaže vše a znovu zkompiluje |
-| `make openocd` | pustí `openocd` pro debug |
-| `make gdb` | spustí STM8-gdb |
-| `make gdbgui` | spustí [gdbgui](https://www.gdbgui.com) (pokud je nainstalované) |
+| `make rebuild` | smaže vše a znovu zkompiluje (elf) |
+| `make reflash` | smaže vše a znovu nahraje |
+| `make flash` | nahraje ihx do chipu — [OpenOCD](https://openocd.org/) na Linuxu, [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) na Windows |
+| `make flash-elf` | nahraje elf do chipu přes OpenOCD |
+| `make flash-ihex` | převede elf na ihex a nahraje přes OpenOCD |
+| `make stm8flash` | záložní metoda nahrávání (používá [stm8flash](https://github.com/vdudouyt/stm8flash)) |
+| `make stm8flash-unlock` | odstraní ochranu čtení přes stm8flash |
+| `make openocd` | spustí OpenOCD pro ladění (běží dál, pak použij `make gdb`) |
+| `make gdb` | spustí STM8-gdb v TUI módu |
+| `make cgdb` | spustí cgdb se STM8-gdb |
+| `make switch-device` | interaktivně přepne cílový čip v Makefile |
+| `make lib` | interaktivně vybere drivery z `lib/` a přesune je do `src/` a `inc/` |
+| `make docs-download` | stáhne datasheet/referenční manuál pro aktuální čip |
 | `make tree` | zobrazí strom projektu |
-| `make spl-renew` | znovu stáhne SPL knihovny |
 
 
 ## Závislosti

@@ -178,17 +178,18 @@ INCLUDE = -I$(PRJ_INC_DIR) -I$(SPL_INC_DIR)
 # VPATH=$(PRJ_SRC_DIR):$(SPL_SRC_DIR)
 
 .PHONY: ihx elf all
+.DELETE_ON_ERROR:
 
 ihx: compile_commands.json  $(TARGET)
 elf: compile_commands.json  $(TARGET_ELF)
 all: ihx elf
 
 $(TARGET_ELF): $(PRJ_OBJECTS_ELF)  $(SPLLIB_ELF)
-	$(CC) $(CFLAGS) $(FMT_ELF) -o $(TARGET_ELF) $^
+	$(CC) $(CFLAGS) $(FMT_ELF) -o $(TARGET_ELF) $^ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 	$(LN) $@ ./out.elf || $(CP) $@ ./out.elf
 
 $(TARGET): $(PRJ_OBJECTS)  $(SPLLIB)
-	$(CC) $(CFLAGS) -o $(TARGET) $^
+	$(CC) $(CFLAGS) -o $(TARGET) $^ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 	$(LN) $@ ./out.ihx || $(CP) $@ ./out.ihx
 	@echo
 	@$(PYTHON) .make/sizecal.py ./out.ihx
