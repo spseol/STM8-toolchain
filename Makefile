@@ -263,7 +263,7 @@ $(OUTPUT_SPL_DIR_ELF):
 	$(MKDIR) -p $@
 
 
-compile_commands.json: $(PRJ_SRC_DIR) $(SPL_SRC_DIR) Makefile
+compile_commands.json: ../SPL/ $(PRJ_SRC_DIR)  Makefile
 	$(PYTHON) .make/compile_database_generator.py $(DEVICE) $(CC_ROOT)
 
 .PHONY: clean clean-spl-objects clean-spl-lib  cleanall
@@ -347,6 +347,7 @@ switch-device: clean
 ../SPLSPL: | ../SPL.tgz
 	tar -C .. $(TAR_TRANSFORM) -xzf ../SPL.tgz spl-main/SPLSPL/
 	@printf "***********************************************************\n*  SPL byla rozbalena. Možná je třeba znovu spusti make   *\n***********************************************************\n"
+$(SPL_SRC_DIR): | ../SPL ../SPLSPL
 
 .PHONY: spl spl-renew tree lib
 
