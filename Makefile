@@ -105,6 +105,12 @@ else
 	PYTHON = python3
 endif
 
+ifeq ($(uname_S),Darwin)
+    TAR_TRANSFORM = -s '%spl-main/%%'
+else
+    TAR_TRANSFORM = --transform='s%spl-main/%%'
+endif
+
 # trap handling requires SDCC >=v3.4.3
 SKIP_TRAPS = 1
 
@@ -336,10 +342,10 @@ switch-device: clean
 ../SPL.tgz:
 	curl https://gitlab.com/spseol/mit-no/spl/-/archive/main/spl-main.tar.gz --output ../SPL.tgz
 ../SPL: | ../SPL.tgz
-	tar -C .. --transform='s%spl-main/%%' -xzf ../SPL.tgz spl-main/SPL/
+	tar -C .. $(TAR_TRANSFORM) -xzf ../SPL.tgz spl-main/SPL/
 	@printf "***********************************************************\n*  SPL byla rozbalena. Možná je třeba znovu spusti make   *\n***********************************************************\n"
 ../SPLSPL: | ../SPL.tgz
-	tar -C .. --transform='s%spl-main/%%' -xzf ../SPL.tgz spl-main/SPLSPL/
+	tar -C .. $(TAR_TRANSFORM) -xzf ../SPL.tgz spl-main/SPLSPL/
 	@printf "***********************************************************\n*  SPL byla rozbalena. Možná je třeba znovu spusti make   *\n***********************************************************\n"
 
 .PHONY: spl spl-renew tree lib

@@ -105,6 +105,12 @@ else
 	PYTHON = python3
 endif
 
+ifeq ($(uname_S),Darwin)
+    TAR_TRANSFORM = -s '%spl-main/%%'
+else
+    TAR_TRANSFORM = --transform='s%spl-main/%%'
+endif
+
 # trap handling requires SDCC >=v3.4.3
 SKIP_TRAPS = 1
 
@@ -178,17 +184,18 @@ INCLUDE = -I$(PRJ_INC_DIR) -I$(SPL_INC_DIR)
 # VPATH=$(PRJ_SRC_DIR):$(SPL_SRC_DIR)
 
 .PHONY: ihx elf all
+.DELETE_ON_ERROR:
 
 ihx: compile_commands.json  $(TARGET)
 elf: compile_commands.json  $(TARGET_ELF)
 all: ihx elf
 
 $(TARGET_ELF): $(PRJ_OBJECTS_ELF)  $(SPLLIB_ELF)
-	$(CC) $(CFLAGS) $(FMT_ELF) -o $(TARGET_ELF) $^
+	$(CC) $(CFLAGS) $(FMT_ELF) -o $(TARGET_ELF) $^ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 	$(LN) $@ ./out.elf || $(CP) $@ ./out.elf
 
 $(TARGET): $(PRJ_OBJECTS)  $(SPLLIB)
-	$(CC) $(CFLAGS) -o $(TARGET) $^
+	$(CC) $(CFLAGS) -o $(TARGET) $^ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 	$(LN) $@ ./out.ihx || $(CP) $@ ./out.ihx
 	@echo
 	@$(PYTHON) .make/sizecal.py ./out.ihx
@@ -335,10 +342,10 @@ switch-device: clean
 ../SPL.tgz:
 	curl https://gitlab.com/spseol/mit-no/spl/-/archive/main/spl-main.tar.gz --output ../SPL.tgz
 ../SPL: | ../SPL.tgz
-	tar -C .. --transform='s%spl-main/%%' -xzf ../SPL.tgz spl-main/SPL/
+	tar -C .. $(TAR_TRANSFORM) -xzf ../SPL.tgz spl-main/SPL/
 	@printf "***********************************************************\n*  SPL byla rozbalena. Možná je třeba znovu spusti make   *\n***********************************************************\n"
 ../SPLSPL: | ../SPL.tgz
-	tar -C .. --transform='s%spl-main/%%' -xzf ../SPL.tgz spl-main/SPLSPL/
+	tar -C .. $(TAR_TRANSFORM) -xzf ../SPL.tgz spl-main/SPLSPL/
 	@printf "***********************************************************\n*  SPL byla rozbalena. Možná je třeba znovu spusti make   *\n***********************************************************\n"
 
 .PHONY: spl spl-renew tree lib
