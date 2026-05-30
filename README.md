@@ -1,15 +1,21 @@
-STM8S Open-Source Toolchain (SDCC + Makefile)
-==============================
+# Open-Source STM8S Toolchain (SDCC + Makefile)
 
 [🇨🇿 Česká verze](README.cs.md) | **🇬🇧 English**
 
-Open-source build system for STM8S microcontrollers using the free
-[SDCC](http://sdcc.sourceforge.net/) compiler — no IAR, no Cosmic, no proprietary tools required.
-Supports **STM8S003**, **STM8S103**, **STM8S105**, **STM8S208** on Linux, Windows, and macOS.
-Includes flashing via [OpenOCD](https://openocd.org/) or [stm8flash](https://github.com/vdudouyt/stm8flash),
-GDB debugging, SPL integration, and VS Code / clangd support via `compile_commands.json`.
+Open-source build system for STM8 microcontrollers (tested and used with STM8S).
+Supports Linux, Windows, and macOS.
 
-* Starter source code tree and `Makefile` for teaching Microprocessor Technology
+**Includes** / **Supports** / **Can do**:
+
+* *build* using the free [SDCC](http://sdcc.sourceforge.net/) compiler
+* *flash* via [OpenOCD](https://openocd.org/) or [stm8flash](https://github.com/vdudouyt/stm8flash)
+* *debug* with GDB and `cgdb`
+* SPL integration and VS Code / clangd support via `compile_commands.json`
+
+## How does it work?
+
+* It is essentially "just" a starter source code tree and `Makefile` (not only) for teaching
+  Microprocessor Technology
   with [STM8S](https://www.st.com/en/microcontrollers-microprocessors/stm8s-series.html).
 * Designed for the [SDCC](http://sdcc.sourceforge.net/) compiler (or
   [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)).
@@ -22,8 +28,7 @@ GDB debugging, SPL integration, and VS Code / clangd support via `compile_comman
   * <https://github.com/matejkrenek/stm8-toolchain>
 
 
-Usage
---------------
+## Usage
 
 First, you need to configure the microprocessor and its frequency in the `Makefile`;
 optionally the path to SDCC installation, or
@@ -73,8 +78,7 @@ endif
 | `make tree` | displays the project tree |
 
 
-Dependencies
----------------
+## Dependencies
 
 * [GNU Make](https://www.gnu.org/software/make/)
 * [GNU Bash](https://www.gnu.org/software/bash/) -- on Windows
