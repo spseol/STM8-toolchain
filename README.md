@@ -1,11 +1,17 @@
-STM8 (SPŠE) Toolchain
+STM8S Open-Source Toolchain (SDCC + Makefile)
 ==============================
 
 [🇨🇿 Česká verze](README.cs.md) | **🇬🇧 English**
 
-* This is a starter source code tree and `Makefile` for teaching Microprocessor
-  Technology with [STM8S](https://www.st.com/en/microcontrollers-microprocessors/stm8s-series.html).
-* The tree is designed for the [SDCC](http://sdcc.sourceforge.net/) compiler (or
+Open-source build system for STM8S microcontrollers using the free
+[SDCC](http://sdcc.sourceforge.net/) compiler — no IAR, no Cosmic, no proprietary tools required.
+Supports **STM8S003**, **STM8S103**, **STM8S105**, **STM8S208** on Linux, Windows, and macOS.
+Includes flashing via [OpenOCD](https://openocd.org/) or [stm8flash](https://github.com/vdudouyt/stm8flash),
+GDB debugging, SPL integration, and VS Code / clangd support via `compile_commands.json`.
+
+* Starter source code tree and `Makefile` for teaching Microprocessor Technology
+  with [STM8S](https://www.st.com/en/microcontrollers-microprocessors/stm8s-series.html).
+* Designed for the [SDCC](http://sdcc.sourceforge.net/) compiler (or
   [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)).
 * The Standard Peripheral Library [SPL](https://www.st.com/content/st_com/en/products/embedded-software/mcu-mpu-embedded-software/stm8-embedded-software/stsw-stm8069.html)
   *should* (for licensing reasons) be downloaded separately from the manufacturer's website and use the

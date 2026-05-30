@@ -1,11 +1,16 @@
-# STM8 (SPŠE) toolchain
+# STM8S open-source toolchain (SDCC + Makefile)
 
 **🇨🇿 Česká verze** | [🇬🇧 English](README.md)
 
-* Toto je startovací strom zdrojových kódů a `Makefile` pro výuku Mikroprocesorové
-  techniky
+Open-source build systém pro mikrokontroléry STM8S pomocí svobodného překladače
+[SDCC](http://sdcc.sourceforge.net/) — bez IAR, bez Cosmic, bez proprietárních nástrojů.
+Podporuje **STM8S003**, **STM8S103**, **STM8S105**, **STM8S208** na Linuxu, Windows i macOS.
+Zahrnuje nahrávání přes [OpenOCD](https://openocd.org/) nebo [stm8flash](https://github.com/vdudouyt/stm8flash),
+ladění GDB, integraci SPL a podporu VS Code / clangd přes `compile_commands.json`.
+
+* Startovací strom zdrojových kódů a `Makefile` pro výuku Mikroprocesorové techniky
   s [STM8S](https://www.st.com/en/microcontrollers-microprocessors/stm8s-series.html).
-* Strom je určen pro překladač [SDCC](http://sdcc.sourceforge.net/) (nebo 
+* Strom je určen pro překladač [SDCC](http://sdcc.sourceforge.net/) (nebo
   [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)).
 * Standardní knihovna pro práci s periferiemi
   [SPL](https://www.st.com/content/st_com/en/products/embedded-software/mcu-mpu-embedded-software/stm8-embedded-software/stsw-stm8069.html)
