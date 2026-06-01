@@ -334,7 +334,7 @@ gdb: $(TARGET_ELF)
 	+stm8-gdb --tui $^
 
 cgdb: $(TARGET_ELF)
-	cgdb -d stm8-gdb -- $^
+	+cgdb -d stm8-gdb -- $^
 
 switch-device: clean
 	+bash .make/switch_device.sh
