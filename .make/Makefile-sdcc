@@ -325,7 +325,7 @@ reflash: clean
 	$(MAKE) flash
 
 
-.PHONY: openocd gdb cgdb
+.PHONY: openocd gdb cgdb pyserial miniterm
 
 openocd:
 	+$(OPENOCD) -c "init" -c "reset halt"
@@ -335,6 +335,10 @@ gdb: $(TARGET_ELF)
 
 cgdb: $(TARGET_ELF)
 	+cgdb -d stm8-gdb -- $^
+
+# sériový terminál na prvním USB-serial portu; rychlost: make miniterm BAUD=9600
+pyserial miniterm:
+	+@PYTHON=$(PYTHON) bash .make/pyserial.auto $(BAUD)
 
 switch-device: clean
 	+bash .make/switch_device.sh

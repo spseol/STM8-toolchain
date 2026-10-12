@@ -1,0 +1,29 @@
+#!/bin/bash
+# Spustí sériový terminál pyserial-miniterm na prvním nalezeném
+# USB-serial portu (/dev/ttyUSB*, /dev/ttyACM*).
+# Použití: pyserial.auto [baudrate [další argumenty miniterm]]
+# Když se žádný port nenajde, miniterm nabídne výběr portu sám.
+
+shopt -s nullglob
+
+if [[ -z $1 ]]; then
+    args=( 115200 )
+else
+    args=( "$@" )
+fi
+
+if command -v pyserial-miniterm >/dev/null; then
+    miniterm=( pyserial-miniterm )
+else
+    miniterm=( "${PYTHON:-python3}" -m serial.tools.miniterm )
+fi
+
+for device in /dev/ttyUSB* /dev/ttyACM*; do
+    if [[ -c $device ]]; then
+        echo "$device"
+        exec "${miniterm[@]}" --echo "$device" "${args[@]}"
+    fi
+done
+
+# žádný port nenalezen → interaktivní výběr portu
+exec "${miniterm[@]}" --echo - "${args[@]}"

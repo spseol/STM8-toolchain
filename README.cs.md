@@ -74,6 +74,7 @@ endif
 | `make openocd` | spustí OpenOCD pro ladění (běží dál, pak použij `make gdb`) |
 | `make gdb` | spustí STM8-gdb v TUI módu |
 | `make cgdb` | spustí cgdb se STM8-gdb |
+| `make miniterm` | spustí sériový terminál (pyserial-miniterm) na prvním `/dev/ttyUSB*`/`/dev/ttyACM*`, rychlost `BAUD=` (výchozí 115200); alias `make pyserial` |
 | `make switch-device` | interaktivně přepne cílový čip v Makefile |
 | `make lib` | interaktivně vybere drivery z `lib/` a přesune je do `src/` a `inc/` |
 | `make docs-download` | stáhne datasheet/referenční manuál pro aktuální čip |
