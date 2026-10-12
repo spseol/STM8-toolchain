@@ -325,7 +325,7 @@ reflash: clean
 	$(MAKE) flash
 
 
-.PHONY: openocd gdb cgdb pyserial miniterm
+.PHONY: openocd gdb cgdb pyserial miniterm baudrate
 
 openocd:
 	+$(OPENOCD) -c "init" -c "reset halt"
@@ -336,9 +336,18 @@ gdb: $(TARGET_ELF)
 cgdb: $(TARGET_ELF)
 	+cgdb -d stm8-gdb -- $^
 
-# sériový terminál na prvním USB-serial portu; rychlost: make miniterm BAUD=9600
-pyserial miniterm:
-	+@PYTHON=$(PYTHON) bash .make/pyserial.auto $(BAUD)
+# sériový terminál na prvním USB-serial portu; rychlost se zjistí z projektu
+# (UARTx_Init nebo zápis do BRR registrů), ručně: make miniterm BAUD=9600
+BAUDRATE_DETECT = $(PYTHON) .make/baudrate.py --cc $(CC) --fcpu $(F_CPU) \
+	--asm $(OUTPUT_DIR) --inc $(PRJ_INC_DIR) \
+	--cpp "$(filter -mstm8 --std-%,$(CFLAGS)) -DF_CPU=$(F_CPU) -D$(DEVICE) $(INCLUDE)" \
+	$(wildcard $(PRJ_SRC_DIR)/*.c)
+
+pyserial miniterm: $(TARGET)
+	+@PYTHON=$(PYTHON) bash .make/pyserial.auto $(or $(BAUD),$$($(BAUDRATE_DETECT)))
+
+baudrate:
+	@$(BAUDRATE_DETECT)
 
 switch-device: clean
 	+bash .make/switch_device.sh

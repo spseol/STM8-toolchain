@@ -72,7 +72,8 @@ endif
 | `make openocd` | starts OpenOCD for debugging (keeps running, then use `make gdb`) |
 | `make gdb` | starts STM8-gdb in TUI mode |
 | `make cgdb` | starts cgdb with STM8-gdb |
-| `make miniterm` | starts serial terminal (pyserial-miniterm) on the first `/dev/ttyUSB*`/`/dev/ttyACM*`, speed `BAUD=` (default 115200); alias `make pyserial` |
+| `make miniterm` | starts serial terminal (pyserial-miniterm) on the first `/dev/ttyUSB*`/`/dev/ttyACM*`, speed detected from the project (`UARTx_Init()` or BRR register writes), override with `BAUD=`, default 115200; alias `make pyserial` |
+| `make baudrate` | prints the baud rate detected from the project and where it was found |
 | `make switch-device` | interactively switches target device in Makefile |
 | `make lib` | interactively selects drivers from `lib/` and moves them to `src/` and `inc/` |
 | `make docs-download` | downloads datasheet/reference manual for the current device |
