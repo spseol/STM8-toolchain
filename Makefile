@@ -325,7 +325,7 @@ reflash: clean
 	$(MAKE) flash
 
 
-.PHONY: openocd debug
+.PHONY: openocd gdb cgdb
 
 openocd:
 	+$(OPENOCD) -c "init" -c "reset halt"
