@@ -66,20 +66,57 @@ endif
 | `make cleanall` | smaže vše včetně SPL knihoven |
 | `make rebuild` | smaže vše a znovu zkompiluje (elf) |
 | `make reflash` | smaže vše a znovu nahraje |
-| `make flash` | nahraje ihx do chipu — [OpenOCD](https://openocd.org/) na Linuxu, [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) na Windows |
+| `make flash` | nahraje ihx do chipu — [OpenOCD](https://openocd.org/) na Linuxu, [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) na Windows; když běží `make debug`, jen přeloží elf a do chipu ho nahraje debugger |
 | `make flash-elf` | nahraje elf do chipu přes OpenOCD |
 | `make flash-ihex` | převede elf na ihex a nahraje přes OpenOCD |
 | `make stm8flash` | záložní metoda nahrávání (používá [stm8flash](https://github.com/vdudouyt/stm8flash)) |
 | `make stm8flash-unlock` | odstraní ochranu čtení přes stm8flash |
-| `make openocd` | spustí OpenOCD pro ladění (běží dál, pak použij `make gdb`) |
-| `make gdb` | spustí STM8-gdb v TUI módu |
-| `make cgdb` | spustí cgdb se STM8-gdb |
+| `make debug` | ladění jedním příkazem: přeloží elf, nahraje ho, zastaví na `main()` a otevře [cgdb](https://cgdb.github.io/) (bez cgdb gdb TUI), viz [Ladění](#ladění) |
+| `make cgdb` | totéž co `make debug` |
+| `make gdb` | totéž, ale v STM8-gdb TUI módu |
+| `make openocd` | spustí samostatný OpenOCD na portu 3333 (pro ruční připojení; `make debug` ho nepotřebuje) |
 | `make miniterm` | spustí sériový terminál (pyserial-miniterm) na prvním `/dev/ttyUSB*`/`/dev/ttyACM*`, rychlost zjistí z projektu (`UARTx_Init()` nebo zápis do BRR registrů), ručně `BAUD=`, jinak 115200; alias `make pyserial` |
 | `make baudrate` | vypíše baud rate zjištěný z projektu a odkud ho vzal |
 | `make switch-device` | interaktivně přepne cílový čip v Makefile |
 | `make lib` | interaktivně vybere drivery z `lib/` a přesune je do `src/` a `inc/` |
 | `make docs-download` | stáhne datasheet/referenční manuál pro aktuální čip |
 | `make tree` | zobrazí strom projektu |
+
+
+## Ladění
+
+`make debug` udělá všechno najednou: přeloží projekt s debug informacemi,
+spustí OpenOCD (běží jen po dobu ladění), nahraje program do chipu a zastaví
+na začátku `main()`. Druhý terminál ani ruční spouštění OpenOCD nejsou potřeba.
+Po ukončení debuggeru (`quit`) program v chipu běží znovu od začátku.
+
+V cgdb je nahoře okno se zdrojákem, dole okno gdb. `Esc` přepne do zdrojáku,
+`i` zpět do gdb. Ve zdrojáku:
+
+| klávesa | |
+|:------- |:- |
+| `mezerník` | breakpoint na řádku pod kurzorem |
+| `F8` / `F10` | další řádek / vstoupit do funkce |
+| `F7` / `F6` | dokončit funkci / pokračovat |
+| `F5` | znovu od začátku `main()` |
+
+V okně gdb fungují běžné příkazy (`n`, `s`, `c`, `finish`, `b 42`, `p x`,
+`display x`, `Ctrl-C` zastaví běžící program) a navíc:
+
+| příkaz | |
+|:------ |:- |
+| `flash` | přeloží (`make elf`), nahraje do chipu a zastaví na `main()` |
+| `reset`, `r` | resetuje chip a nechá program doběhnout na `main()` |
+| `vars` | vypíše lokální proměnné; po každém zastavení se vypisují samy (`vars off` / `vars on`) |
+| `display x` | vypisuje proměnnou `x` po každém zastavení; seznam se ukládá do `.debug-display` a příští `make debug` ho obnoví (lokální proměnné jiné funkce až v té funkci) |
+
+**Nový kód za běhu ladění:** stačí upravit zdroják a v jiném terminálu
+(nebo z editoru) spustit `make flash`. Debugger změnu pozná, program zastaví,
+nahraje nový a zastaví na `main()`. Totéž udělá příkaz `flash` v gdb.
+
+Konfigurace je v `.make/gdbinit` a `.make/stm8gdb.py`; log OpenOCD
+v `build-*-elf/openocd.log`. Soubor `.debug-display` (jeden výraz na řádek)
+jde upravit i ručně, třeba připravit k příkladu sledované proměnné.
 
 
 ## Závislosti
@@ -91,6 +128,7 @@ endif
   nebo [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)
 * [STM8 binutils](https://stm8-binutils-gdb.sourceforge.io) (`stm8-gdb`, `stm8-ld`)
 * [OpenOCD](https://openocd.org/) pro `flash` a `debug`
+* [cgdb](https://cgdb.github.io/) pro `make debug` (bez něj se použije gdb TUI)
   nebo [STVP](https://www.st.com/en/development-tools/stvp-stm8.html)
   pro `flash` na Windows.
 * ([stm8flash](https://github.com/vdudouyt/stm8flash) pro `flash2`)

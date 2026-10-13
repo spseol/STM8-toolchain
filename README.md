@@ -64,20 +64,59 @@ endif
 | `make cleanall` | deletes everything including SPL libraries |
 | `make rebuild` | cleans everything and recompiles (elf) |
 | `make reflash` | cleans everything and flashes again |
-| `make flash` | uploads ihx to the chip — [OpenOCD](https://openocd.org/) on Linux, [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) on Windows |
+| `make flash` | uploads ihx to the chip — [OpenOCD](https://openocd.org/) on Linux, [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) on Windows; while `make debug` is running it only builds the elf and the debugger uploads it |
 | `make flash-elf` | uploads elf to the chip via OpenOCD |
 | `make flash-ihex` | converts elf to ihex and uploads via OpenOCD |
 | `make stm8flash` | alternative flash method (uses [stm8flash](https://github.com/vdudouyt/stm8flash)) |
 | `make stm8flash-unlock` | removes read protection via stm8flash |
-| `make openocd` | starts OpenOCD for debugging (keeps running, then use `make gdb`) |
-| `make gdb` | starts STM8-gdb in TUI mode |
-| `make cgdb` | starts cgdb with STM8-gdb |
+| `make debug` | one-command debugging: builds the elf, uploads it, stops at `main()` and opens [cgdb](https://cgdb.github.io/) (gdb TUI without cgdb), see [Debugging](#debugging) |
+| `make cgdb` | same as `make debug` |
+| `make gdb` | same, but in STM8-gdb TUI mode |
+| `make openocd` | starts a standalone OpenOCD on port 3333 (for manual connection; `make debug` does not need it) |
 | `make miniterm` | starts serial terminal (pyserial-miniterm) on the first `/dev/ttyUSB*`/`/dev/ttyACM*`, speed detected from the project (`UARTx_Init()` or BRR register writes), override with `BAUD=`, default 115200; alias `make pyserial` |
 | `make baudrate` | prints the baud rate detected from the project and where it was found |
 | `make switch-device` | interactively switches target device in Makefile |
 | `make lib` | interactively selects drivers from `lib/` and moves them to `src/` and `inc/` |
 | `make docs-download` | downloads datasheet/reference manual for the current device |
 | `make tree` | displays the project tree |
+
+
+## Debugging
+
+`make debug` does everything at once: it builds the project with debug info,
+starts OpenOCD (it runs only while debugging), uploads the program to the chip
+and stops at the beginning of `main()`. No second terminal and no manual
+OpenOCD start are needed. After you quit the debugger (`quit`), the program
+in the chip runs again from the start.
+
+cgdb shows the source window at the top and the gdb window at the bottom.
+`Esc` switches to the source window, `i` back to gdb. In the source window:
+
+| key | |
+|:--- |:- |
+| `space` | breakpoint on the line under the cursor |
+| `F8` / `F10` | next line / step into function |
+| `F7` / `F6` | finish function / continue |
+| `F5` | restart from the beginning of `main()` |
+
+The gdb window accepts the usual commands (`n`, `s`, `c`, `finish`, `b 42`,
+`p x`, `display x`, `Ctrl-C` stops the running program) plus:
+
+| command | |
+|:------- |:- |
+| `flash` | builds (`make elf`), uploads to the chip and stops at `main()` |
+| `reset`, `r` | resets the chip and runs the program to `main()` |
+| `vars` | prints local variables; they are printed automatically after every stop (`vars off` / `vars on`) |
+| `display x` | prints the variable `x` after every stop; the list is saved to `.debug-display` and the next `make debug` restores it (locals of another function once the program stops there) |
+
+**New code while debugging:** edit the source and run `make flash` in another
+terminal (or from your editor). The debugger detects the change, stops the
+program, uploads the new one and stops at `main()`. The `flash` command in gdb
+does the same.
+
+The configuration is in `.make/gdbinit` and `.make/stm8gdb.py`; the OpenOCD
+log is in `build-*-elf/openocd.log`. The `.debug-display` file (one expression
+per line) can be edited by hand, e.g. to ship watched variables with an example.
 
 
 ## Dependencies
@@ -89,6 +128,7 @@ endif
   or [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)
 * [STM8 binutils](https://stm8-binutils-gdb.sourceforge.io) (`stm8-gdb`, `stm8-ld`)
 * [OpenOCD](https://openocd.org/) for `flash` and `debug`
+* [cgdb](https://cgdb.github.io/) for `make debug` (gdb TUI is used without it)
   or [STVP](https://www.st.com/en/development-tools/stvp-stm8.html)
   for `flash` on Windows.
 * ([stm8flash](https://github.com/vdudouyt/stm8flash) for `flash2`)

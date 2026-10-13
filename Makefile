@@ -91,6 +91,9 @@ else
 endif
 OPENOCD = openocd -f .make/stm8s-flash.cfg -f $(interface) -f $(target)
 
+# běží make debug? (PID gdb v .debug-session a proces žije)
+DEBUG_PID := $(shell p=$$(cat .debug-session 2>/dev/null) && kill -0 $$p 2>/dev/null && echo $$p)
+
 
 ifeq ($(OS),Windows_NT)
     uname_S := Windows
@@ -292,9 +295,12 @@ cleanall: clean-spl-lib clean
 
 .PHONY: flash flash-elf flash-ihex stm8flash rebuild reflash
 
-flash: $(TARGET)
+# za běhu make debug jen přeloží ELF, do čipu ho nahraje debugger (ST-Link drží on)
+flash: $(if $(DEBUG_PID),elf,$(TARGET))
 ifeq ($(OS),Windows_NT)
 	+$(STVP) -BoardName=ST-LINK -Device=$(DEVICE_FLASH_STVP) -Port=USB -ProgMode=SWIM -no_loop -no_log -FileProg=$(TARGET)
+else ifneq ($(DEBUG_PID),)
+	@printf "\033[1;33m*** Běží make debug – nový program do čipu nahraje debugger.\033[0m\n"
 else
 	+$(OPENOCD) -c "init" -c "program_device $(TARGET) 0"
 endif
@@ -325,16 +331,24 @@ reflash: clean
 	$(MAKE) flash
 
 
-.PHONY: openocd gdb cgdb pyserial miniterm baudrate
+.PHONY: debug openocd gdb cgdb pyserial miniterm baudrate
 
+# OpenOCD spouští gdb sám (viz .make/stm8gdb.py); make openocd jen pro ruční připojení na :3333
 openocd:
 	+$(OPENOCD) -c "init" -c "reset halt"
 
-gdb: $(TARGET_ELF)
-	+stm8-gdb --tui $^
+GDB_ENV = STM8_OPENOCD='$(OPENOCD)' STM8_OPENOCD_LOG=$(OUTPUT_DIR_ELF)/openocd.log
 
-cgdb: $(TARGET_ELF)
-	+cgdb -d stm8-gdb -- $^
+# ladění jedním příkazem: přeloží, nahraje, zastaví na main(); bez cgdb gdb TUI
+debug cgdb: $(TARGET_ELF)
+ifneq ($(shell command -v cgdb),)
+	+$(GDB_ENV) STM8_UI=cgdb cgdb -d stm8-gdb -- -x .make/gdbinit $^
+else
+	+$(GDB_ENV) STM8_UI=tui stm8-gdb --tui -x .make/gdbinit -ex 'focus cmd' $^
+endif
+
+gdb: $(TARGET_ELF)
+	+$(GDB_ENV) STM8_UI=tui stm8-gdb --tui -x .make/gdbinit -ex 'focus cmd' $^
 
 # sériový terminál na prvním USB-serial portu; rychlost se zjistí z projektu
 # (UARTx_Init nebo zápis do BRR registrů), ručně: make miniterm BAUD=9600

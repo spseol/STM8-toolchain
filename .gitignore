@@ -5,3 +5,4 @@ out.ihx
 out.elf
 __pycache__
 CLAUDE.md
+.debug-session

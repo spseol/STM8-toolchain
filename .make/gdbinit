@@ -1,0 +1,31 @@
+# Konfigurace gdb pro ladění STM8.
+# Načítá ji `make debug` (cgdb) a `make gdb` (TUI) přes `-x .make/gdbinit`,
+# takže nevadí auto-load safe-path (lokální .gdbinit by gdb odmítl).
+
+set style enabled on
+set print pretty on
+set print array-indexes on
+set pagination off
+set confirm off
+
+set history save on
+set history filename ~/.gdb_history_stm8
+set history size 10000
+
+define regs
+  info registers
+end
+document regs
+Vypíše registry procesoru.
+end
+
+define bm
+  break main
+end
+document bm
+Nastaví breakpoint na main().
+end
+
+# příkazy flash, reset, run/start, vars; připojení přes OpenOCD; hlídání ELF
+source .make/stm8gdb.py
+python stm8_start()
