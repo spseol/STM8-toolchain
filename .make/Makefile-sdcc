@@ -342,13 +342,13 @@ GDB_ENV = STM8_OPENOCD='$(OPENOCD)' STM8_OPENOCD_LOG=$(OUTPUT_DIR_ELF)/openocd.l
 # ladění jedním příkazem: přeloží, nahraje, zastaví na main(); bez cgdb gdb TUI
 debug cgdb: $(TARGET_ELF)
 ifneq ($(shell command -v cgdb),)
-	+$(GDB_ENV) STM8_UI=cgdb cgdb -d stm8-gdb -- -x .make/gdbinit $^
+	+$(GDB_ENV) STM8_UI=cgdb cgdb -d stm8-gdb -- -q -x .make/gdbinit $^
 else
-	+$(GDB_ENV) STM8_UI=tui stm8-gdb --tui -x .make/gdbinit -ex 'focus cmd' $^
+	+$(GDB_ENV) STM8_UI=tui stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $^
 endif
 
 gdb: $(TARGET_ELF)
-	+$(GDB_ENV) STM8_UI=tui stm8-gdb --tui -x .make/gdbinit -ex 'focus cmd' $^
+	+$(GDB_ENV) STM8_UI=tui stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $^
 
 # sériový terminál na prvním USB-serial portu; rychlost se zjistí z projektu
 # (UARTx_Init nebo zápis do BRR registrů), ručně: make miniterm BAUD=9600

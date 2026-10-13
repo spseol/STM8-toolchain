@@ -13,6 +13,8 @@ SESSION_FILE = os.path.join(PROJECT_DIR, ".debug-session")  # čte Makefile (mak
 DISPLAY_FILE = os.path.join(PROJECT_DIR, ".debug-display")  # display mezi sezeními
 GDB_PORT = 3333
 POLL_INTERVAL = 0.5  # s, jak často se kontroluje změna ELF
+NAME_COLOR = "36"  # jména proměnných azurově (jako `info locals` v gdb)
+VALUE_COLOR = ""  # hodnoty bez barvy; třeba "35" = fialově v print, display, watch, …
 
 state = {
     "connected": False,
@@ -336,7 +338,7 @@ def format_value(value):
     kind = value.type.strip_typedefs()
     if kind.code == gdb.TYPE_CODE_ARRAY:
         kind = kind.target().strip_typedefs()
-    options = {"pretty_structs": False, "max_elements": 8}
+    options = {"pretty_structs": False, "max_elements": 8, "styling": True}
     if kind.code == gdb.TYPE_CODE_INT and kind.sizeof == 1:
         options["format"] = "d" if getattr(kind, "is_signed", False) else "u"
     return value.format_string(**options)
@@ -368,8 +370,60 @@ def show_vars():
     items = frame_vars()
     if items:
         gdb.write(
-            "  " + "   ".join(f"\033[36m{n}\033[0m = {v}" for n, v in items) + "\n"
+            "  "
+            + "   ".join(f"\033[{NAME_COLOR}m{n}\033[0m = {v}" for n, v in items)
+            + "\n"
         )
+
+
+# ---------------------------------------------------------------------------
+# barevné hodnoty: print, display, watch, info locals, finish, …
+# ---------------------------------------------------------------------------
+
+# typy, jejichž hodnota se vypisuje celá najednou (ukazatele barví gdb sám)
+COLOR_TYPES = (
+    gdb.TYPE_CODE_INT,
+    gdb.TYPE_CODE_CHAR,
+    gdb.TYPE_CODE_BOOL,
+    gdb.TYPE_CODE_ENUM,
+    gdb.TYPE_CODE_FLT,
+)
+
+
+class ColorPrinter:
+    """Obarví hodnotu. Formát (print/x, display/t, …) zůstává."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def to_string(self):
+        options = gdb.print_options()  # včetně /x a podobných z příkazu
+        options["raw"] = True  # bez pretty-printerů, jinak by se volal znovu
+        try:
+            text = self.value.format_string(**options)
+        except gdb.MemoryError:
+            raise  # gdb vypíše <error: Cannot access memory …>
+        except gdb.error as e:
+            text = f"<{e}>"
+        return f"\033[{VALUE_COLOR}m{text}\033[0m"
+
+
+def color_printer(value):
+    """Struktury a pole nechá gdb, obarví se jejich prvky. Řetězce celé."""
+    if not VALUE_COLOR or not gdb.parameter("style enabled"):
+        return None
+    kind = value.type.strip_typedefs()
+    if kind.code == gdb.TYPE_CODE_ARRAY:
+        item = kind.target().strip_typedefs()
+        if item.code in (gdb.TYPE_CODE_INT, gdb.TYPE_CODE_CHAR) and item.sizeof == 1:
+            return ColorPrinter(value)  # char[] gdb vypisuje jako "text"
+        return None
+    if kind.code in COLOR_TYPES:
+        return ColorPrinter(value)
+    return None
+
+
+gdb.pretty_printers.append(color_printer)
 
 
 # ---------------------------------------------------------------------------
