@@ -53,7 +53,7 @@ ifeq ($(OS),Windows_NT)
 else
   #CC_ROOT = /usr
   #CC_ROOT = /usr/local
-  CC_ROOT = /usr/local/stow/sdcc-4.4.0
+  CC_ROOT = /usr/local/stow/sdcc-X.X.X
   #CC_ROOT = /usr/local/stow/sdcc-gas
 
   CC = $(CC_ROOT)/bin/sdcc
