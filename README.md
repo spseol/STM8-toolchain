@@ -109,13 +109,31 @@ The gdb window accepts the usual commands (`n`, `s`, `c`, `finish`, `b 42`,
 | `vars` | prints local variables; they are printed automatically after every stop (`vars off` / `vars on`) |
 | `display x` | prints the variable `x` after every stop; the list is saved to `.debug-display` and the next `make debug` restores it (locals of another function once the program stops there) |
 
+**Peripheral registers (SFR):** gdb knows the peripherals from `stm8s.h`
+under the same names as in C, with Tab completion. `p TIM4->CR1`,
+`display GPIOB->ODR`, `p GPIOB` (the whole peripheral) and
+`set var GPIOD->ODR |= 0x10` work, and so do bit masks from `stm8s.h`:
+`p/t SPI->CR2 & SPI_CR2_SSM`. A register is printed in hex, in binary and
+with the names of the set bits. What changed since the previous stop is
+shown in yellow with the old value, e.g. `0x21 0010 0001  (bylo 0x01)`.
+`display/x` and `p/x` skip this, so use `display GPIOB->ODR`.
+
+| command | |
+|:------- |:- |
+| `sfr` | lists the chip's peripherals |
+| `sfr TIM4 [GPIOB …]` | registers of a peripheral and their set bits; a cleared bit is shown as `-UIF` |
+| `sfr TIM4.CR1` | one register bit by bit, with descriptions and the reset value |
+
+Reading some registers clears flags (`UART1->DR` clears RXNE, …). `sfr TIM4`
+skips such registers, but `p UART1` or `display UART1` reads them.
+
 **New code while debugging:** edit the source and run `make flash` in another
 terminal (or from your editor). The debugger detects the change, stops the
 program, uploads the new one and stops at `main()`. The `flash` command in gdb
 does the same.
 
-The configuration is in `.make/gdbinit` and `.make/stm8gdb.py`; the OpenOCD
-log is in `build-*-elf/openocd.log`. The `.debug-display` file (one expression
+The configuration is in `.make/gdbinit`, `.make/stm8gdb.py` and
+`.make/stm8sfr.py`; the OpenOCD log is in `build-*-elf/openocd.log`. The `.debug-display` file (one expression
 per line) can be edited by hand, e.g. to ship watched variables with an example.
 
 

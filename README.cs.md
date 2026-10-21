@@ -110,11 +110,29 @@ V okně gdb fungují běžné příkazy (`n`, `s`, `c`, `finish`, `b 42`, `p x`,
 | `vars` | vypíše lokální proměnné; po každém zastavení se vypisují samy (`vars off` / `vars on`) |
 | `display x` | vypisuje proměnnou `x` po každém zastavení; seznam se ukládá do `.debug-display` a příští `make debug` ho obnoví (lokální proměnné jiné funkce až v té funkci) |
 
+**Registry periferií (SFR):** gdb zná periferie ze `stm8s.h` pod stejnými
+jmény jako v C, i s doplňováním tabulátorem. Funguje `p TIM4->CR1`,
+`display GPIOB->ODR`, `p GPIOB` (celá periferie) a
+`set var GPIOD->ODR |= 0x10`, a také bitové masky ze `stm8s.h`:
+`p/t SPI->CR2 & SPI_CR2_SSM`. Registr se vypíše šestnáctkově, binárně
+a se jmény nastavených bitů. Co se od minulého zastavení změnilo, je žlutě
+i s původní hodnotou, třeba `0x21 0010 0001  (bylo 0x01)`. `display/x`
+a `p/x` tohle vynechají, proto `display GPIOB->ODR`.
+
+| příkaz | |
+|:------ |:- |
+| `sfr` | seznam periferií čipu |
+| `sfr TIM4 [GPIOB …]` | registry periferie a nastavené bity; vynulovaný bit jako `-UIF` |
+| `sfr TIM4.CR1` | jeden registr bit po bitu s popisem a hodnotou po resetu |
+
+Čtení některých registrů maže příznaky (`UART1->DR` maže RXNE, …). `sfr TIM4`
+je přeskočí, ale `p UART1` nebo `display UART1` je přečte.
+
 **Nový kód za běhu ladění:** stačí upravit zdroják a v jiném terminálu
 (nebo z editoru) spustit `make flash`. Debugger změnu pozná, program zastaví,
 nahraje nový a zastaví na `main()`. Totéž udělá příkaz `flash` v gdb.
 
-Konfigurace je v `.make/gdbinit` a `.make/stm8gdb.py`; log OpenOCD
+Konfigurace je v `.make/gdbinit`, `.make/stm8gdb.py` a `.make/stm8sfr.py`; log OpenOCD
 v `build-*-elf/openocd.log`. Soubor `.debug-display` (jeden výraz na řádek)
 jde upravit i ručně, třeba připravit k příkladu sledované proměnné.
 

@@ -5,6 +5,8 @@
 set style enabled on
 set print pretty on
 set print array-indexes on
+# u adres dat by gdb kvůli DWARF ze SDCC hlásil „Internal error: pc … in read in CU“
+set print symbol off
 set pagination off
 set confirm off
 
@@ -28,4 +30,6 @@ end
 
 # příkazy flash, reset, run/start, vars; připojení přes OpenOCD; hlídání ELF
 source .make/stm8gdb.py
+# registry periferií: p TIM4->CR1, masky ze stm8s.h, příkaz sfr
+source .make/stm8sfr.py
 python stm8_start()

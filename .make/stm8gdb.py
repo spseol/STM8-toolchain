@@ -529,6 +529,8 @@ def banner():
         "STM8  flash = přelož + nahraj + main(), reset / r = znovu od main(),"
         " vars [on|off] = proměnné",
         "      make flash v jiném terminálu nový program do čipu nahraje sám",
+        "SFR   sfr = periferie, sfr TIM4 = registry, sfr TIM4.CR1 = bity,"
+        " display GPIOB->ODR, set var GPIOD->ODR |= 0x10",
     ]
     say("─" * 30 + " STM8 debug " + "─" * 30, "1;36")
     for line in lines:

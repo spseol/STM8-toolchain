@@ -337,18 +337,25 @@ reflash: clean
 openocd:
 	+$(OPENOCD) -c "init" -c "reset halt"
 
-GDB_ENV = STM8_OPENOCD='$(OPENOCD)' STM8_OPENOCD_LOG=$(OUTPUT_DIR_ELF)/openocd.log
+# registry periferií pro gdb (p TIM4->CR1, příkaz sfr): symboly a masky ze stm8s.h
+SFR_ELF = $(OUTPUT_DIR_ELF)/sfr.elf
+$(SFR_ELF): $(SPL_INC_DIR)/stm8s.h .make/sfr_gen.py Makefile | $(OUTPUT_DIR_ELF) ../SPLSPL
+	@$(PYTHON) .make/sfr_gen.py --cc "$(CC)" --objcopy stm8-objcopy -o $@ \
+		--cflags "$(filter -mstm8 --std-%,$(CFLAGS)) -D$(DEVICE) $(INCLUDE)"
+
+GDB_ENV = STM8_OPENOCD='$(OPENOCD)' STM8_OPENOCD_LOG=$(OUTPUT_DIR_ELF)/openocd.log \
+	STM8_SFR=$(SFR_ELF)
 
 # ladění jedním příkazem: přeloží, nahraje, zastaví na main(); bez cgdb gdb TUI
-debug cgdb: $(TARGET_ELF)
+debug cgdb: $(TARGET_ELF) $(SFR_ELF)
 ifneq ($(shell command -v cgdb),)
-	+$(GDB_ENV) STM8_UI=cgdb cgdb -d stm8-gdb -- -q -x .make/gdbinit $^
+	+$(GDB_ENV) STM8_UI=cgdb cgdb -d stm8-gdb -- -q -x .make/gdbinit $(TARGET_ELF)
 else
-	+$(GDB_ENV) STM8_UI=tui stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $^
+	+$(GDB_ENV) STM8_UI=tui stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $(TARGET_ELF)
 endif
 
-gdb: $(TARGET_ELF)
-	+$(GDB_ENV) STM8_UI=tui stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $^
+gdb: $(TARGET_ELF) $(SFR_ELF)
+	+$(GDB_ENV) STM8_UI=tui stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $(TARGET_ELF)
 
 # sériový terminál na prvním USB-serial portu; rychlost se zjistí z projektu
 # (UARTx_Init nebo zápis do BRR registrů), ručně: make miniterm BAUD=9600
