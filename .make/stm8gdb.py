@@ -15,6 +15,7 @@ GDB_PORT = 3333
 POLL_INTERVAL = 0.5  # s, jak často se kontroluje změna ELF
 NAME_COLOR = "36"  # jména proměnných azurově (jako `info locals` v gdb)
 VALUE_COLOR = ""  # hodnoty bez barvy; třeba "35" = fialově v print, display, watch, …
+HELP_COLOR = "1;35"  # příkazy a klávesy v nápovědě po startu tučně purpurově
 
 state = {
     "connected": False,
@@ -508,33 +509,34 @@ VarsCommand()
 
 
 def banner():
+    """Nápověda po startu; příkazy a klávesy jsou ve zpětných apostrofech."""
     ui = os.environ.get("STM8_UI")
     lines = []
     if ui == "cgdb":
         lines += [
-            "cgdb  Esc = okno se zdrojákem, i = zpět do gdb",
-            "      ve zdrojáku: mezerník = breakpoint, F8 next, F10 step,"
-            " F7 finish, F6 continue, F5 znovu od main()",
+            "cgdb  `Esc` = okno se zdrojákem, `i` = zpět do gdb",
+            "      ve zdrojáku: `mezerník` = breakpoint, `F5` znovu od main(),"
+            " `F6` continue, `F7` finish, `F8` next, `F10` step",
         ]
     elif ui == "tui":
         lines += [
-            "TUI   Ctrl-x s = režim jedné klávesy (n s f c r v, q = konec),"
-            " Ctrl-x a = TUI vyp/zap",
+            "TUI   `Ctrl-x s` = režim jedné klávesy (`n s f c r v`, `q` = konec),"
+            " `Ctrl-x a` = TUI vyp/zap",
         ]
     lines += [
-        "gdb   n = další řádek, s = do funkce, finish = z funkce, c = pokračuj,"
-        " Ctrl-C = zastav",
-        "      b 42 = breakpoint na řádku 42, p x = vypiš x,"
-        " display x = vypisuj x po každém kroku (pamatuje se i pro příště)",
-        "STM8  flash = přelož + nahraj + main(), reset / r = znovu od main(),"
-        " vars [on|off] = proměnné",
-        "      make flash v jiném terminálu nový program do čipu nahraje sám",
-        "SFR   sfr = periferie, sfr TIM4 = registry, sfr TIM4.CR1 = bity,"
-        " display GPIOB->ODR, set var GPIOD->ODR |= 0x10",
+        "gdb   `n` = další řádek, `s` = do funkce, `finish` = z funkce,"
+        " `c` = pokračuj, `Ctrl-C` = zastav",
+        "      `b 42` = breakpoint na řádku 42, `p x` = vypiš x,"
+        " `display x` = vypisuj x po každém kroku (pamatuje se i pro příště)",
+        "STM8  `flash` = přelož + nahraj + main(), `reset` / `r` = znovu od main(),"
+        " `vars [on|off]` = proměnné",
+        "      `make flash` v jiném terminálu nový program do čipu nahraje sám",
+        "SFR   `sfr` = periferie, `sfr TIM4` = registry, `sfr TIM4.CR1` = bity,"
+        " `display GPIOB->ODR`, `set var GPIOD->ODR |= 0x10`",
     ]
     say("─" * 30 + " STM8 debug " + "─" * 30, "1;36")
     for line in lines:
-        gdb.write(line + "\n")
+        gdb.write(re.sub(r"`([^`]+)`", rf"\033[{HELP_COLOR}m\1\033[0m", line) + "\n")
 
 
 def stm8_start():
