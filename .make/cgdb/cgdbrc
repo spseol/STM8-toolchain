@@ -1,0 +1,4 @@
+# cgdb pro make debug (CGDB_DIR): poměr okna se zdrojákem a okna gdb
+set winsplit=even
+# set winsplit=gdb_big
+# set winsplitorientation=vertical
