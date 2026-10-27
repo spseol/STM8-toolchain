@@ -26,8 +26,8 @@
   */ 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM8S_CONF_H
-#define __STM8S_CONF_H
+#ifndef STM8S_CONF_H
+#define STM8S_CONF_H
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm8s.h"
@@ -110,7 +110,7 @@ void assert_failed(uint8_t* file, uint32_t line);
 #define assert_param(expr) ((void)0)
 #endif /* USE_FULL_ASSERT */
 
-#endif /* __STM8S_CONF_H */
+#endif /* STM8S_CONF_H */
 
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -2,8 +2,8 @@
  * Soubor:  sonboard.h
  */
 
-#ifndef __SONBOARD_H__
-#define __SONBOARD_H__
+#ifndef SONBOARD_H
+#define SONBOARD_H
 
 /*  ----      LED      ----     */
 // Zapojení LED: OD - Open Drain
@@ -38,4 +38,4 @@
 #define SB_S4_PIN GPIO_PIN_2
 
 
-#endif
+#endif /* SONBOARD_H */

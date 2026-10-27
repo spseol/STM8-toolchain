@@ -1,3 +1,6 @@
+#ifndef SWSPI_H
+#define SWSPI_H
+
 #include "stm8s.h"
 
 #define SWSPI_DIN_PORT  GPIOE
@@ -37,3 +40,5 @@
 void swspi_init(void);
 void swspi_tx16(uint16_t data);
 void swspi_tx2x8(uint8_t address, uint8_t data);
+
+#endif /* SWSPI_H */

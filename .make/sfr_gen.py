@@ -37,7 +37,7 @@ COMMENT_RE = re.compile(
 STRUCT_RE = re.compile(r"typedef\s+struct\s*\w*\s*\{", re.M)
 FIELD_RE = re.compile(r"\b(\w+)\s*;\s*/\*!<\s*(.*?)\s*\*/")
 
-PROBE = '#define __STM8S_IT_H  /* bez deklarací přerušení */\n#include "stm8s.h"\n'
+PROBE = '#define STM8S_IT_H  /* bez deklarací přerušení */\n#include "stm8s.h"\n'
 
 
 def warn(msg):

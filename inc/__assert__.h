@@ -1,5 +1,5 @@
-#ifndef __ASSERT_H__
-#define __ASSERT_H__ 1
+#ifndef ASSERT_H
+#define ASSERT_H
 
 // This is called by some of the SPL files on error.
 #ifdef USE_FULL_ASSERT
@@ -23,6 +23,6 @@ void assert_failed(uint8_t* file, uint32_t line)
   {
   }
 }
-#endif
+#endif /* USE_FULL_ASSERT */
 
-#endif
+#endif /* ASSERT_H */

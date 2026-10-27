@@ -26,8 +26,8 @@
   */ 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM8S_IT_H
-#define __STM8S_IT_H
+#ifndef STM8S_IT_H
+#define STM8S_IT_H
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm8s.h"
@@ -195,7 +195,7 @@
 
 #endif /* !(_RAISONANCE_) && !(_SDCC_) */
 
-#endif /* __STM8S_IT_H */
+#endif /* STM8S_IT_H */
 
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

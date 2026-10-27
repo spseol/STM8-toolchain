@@ -5,8 +5,8 @@
  *      Author: misa
  */
 
-#ifndef STM8_HD_44780_H_
-#define STM8_HD_44780_H_
+#ifndef STM8_HD44780_H
+#define STM8_HD44780_H
 
 #include "stm8s.h"
 
@@ -91,7 +91,7 @@
 #ifdef USE_POWER_PIN
 	#define LCD_PWR_PORT    GPIOE
 	#define LCD_PWR_PIN  		GPIO_PIN_0
-#endif
+#endif /* USE_POWER_PIN */
 
 // If need, you can change delays and timeouts. All in us.
 #define LCD_STARTUP_DELAY1 15000
@@ -186,9 +186,9 @@ void lcd_store_symbol(uint8_t pos, uint8_t* charmap); 	// write users own charat
 
 #ifdef USE_POWER_PIN
 	#define lcd_power_off(void) GPIO_WriteLow(LCD_PWR_PORT,LCD_PWR_PIN)
-#endif
+#endif /* USE_POWER_PIN */
 
 
 
 
-#endif /* STM8_HD_44780_H_ */
+#endif /* STM8_HD44780_H */

@@ -1,5 +1,5 @@
-#ifndef __STM8_SWI2C_H
-#define __STM8_SWI2C_H
+#ifndef SWI2C_H
+#define SWI2C_H
 
 /* Version 1.3
 editlist:
@@ -64,4 +64,4 @@ uint8_t swi2c_STOP(void);
 
 
 
-#endif                          /* __STM8_SWI2C_H */
+#endif /* SWI2C_H */

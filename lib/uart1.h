@@ -1,5 +1,5 @@
-#ifndef __STM8_UART1_H
-#define __STM8_UART1_H
+#ifndef UART1_H
+#define UART1_H
 
 #include "stm8s.h"
 
@@ -21,7 +21,7 @@
 #define GETCHAR_PROTOTYPE int getchar (void)
 #endif                          /* _RAISONANCE_ */
 
-#endif /* __STM8_UART1_H*/
+#endif /* UART1_H */
 
 PUTCHAR_PROTOTYPE;
 GETCHAR_PROTOTYPE;

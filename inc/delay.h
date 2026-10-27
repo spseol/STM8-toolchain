@@ -1,9 +1,9 @@
-#ifndef _UTIL_DELAY_H_
-#define _UTIL_DELAY_H_ 1
+#ifndef DELAY_H
+#define DELAY_H
 
 #ifndef F_CPU
 #warning F_CPU is not defined!
-#endif
+#endif /* F_CPU */
 
 #include "stm8s.h"
 
@@ -39,7 +39,7 @@ static inline void _delay_cycl( unsigned short __ticks )
   #error ToDo for IAR
 #else
  #error Unsupported Compiler!          /* Compiler defines not found */
-#endif
+#endif /* __CSMC__ / __SDCC / __RCST7__ / __ICCSTM8__ */
 }
 
 static inline void _delay_us( const unsigned short __us ){
@@ -47,4 +47,4 @@ static inline void _delay_us( const unsigned short __us ){
 }
 
 
-#endif
+#endif /* DELAY_H */

@@ -1,5 +1,5 @@
-#ifndef _MILIS_H_
-#define _MILIS_H_ 1
+#ifndef MILIS_H
+#define MILIS_H
 
 #define MILIS_32BIT_TIME 1
 
@@ -20,15 +20,15 @@
 #else
 #warning "milis timer parameters not defined for this clock !"
 
-#endif
+#endif /* F_CPU */
 
 #if MILIS_32BIT_TIME!=0
 #define MILIS_PROTOTYPE uint32_t milis(void)
 #else
 #define MILIS_PROTOTYPE uint16_t milis(void)
-#endif
+#endif /* MILIS_32BIT_TIME */
 
 void init_milis(void);
 MILIS_PROTOTYPE;
 
-#endif
+#endif /* MILIS_H */

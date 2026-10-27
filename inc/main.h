@@ -1,5 +1,5 @@
-#ifndef _MAIN_H_
-#define _MAIN_H_ 1
+#ifndef MAIN_H
+#define MAIN_H
 
 #define LOW(BAGR) GPIO_WriteLow(BAGR##_PORT, BAGR##_PIN)
 #define HIGH(BAGR) GPIO_WriteHigh(BAGR##_PORT, BAGR##_PIN)
@@ -11,4 +11,4 @@
 // functions
 void init(void);
 
-#endif // !_MAIN_H_
+#endif /* MAIN_H */

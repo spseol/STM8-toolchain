@@ -1,7 +1,7 @@
 // https://www.analog.com/media/en/technical-documentation/data-sheets/max7219-max7221.pdf
 
-#ifndef MAX7219_h
-#define MAX7219_h
+#ifndef MAX7219_H
+#define MAX7219_H
 
 #define NOOP        0       // No operation
 #define DIGIT0      1       // zápis hodnoty na 1. cifru
@@ -32,4 +32,4 @@
 #define DECODE_NONE     0           // vypíná znakovou sadu pro všechny cifry
 
 
-#endif // MAX7219_h
+#endif /* MAX7219_H */
