@@ -3,12 +3,11 @@
  * Datum:   21.11.2023 19:04
  * Autor:   Marek Nožka, nozka <@t> spseol <d.t> cz
  * Licence: GNU/GPL 
- * Úloha: 
  * Popis:   hlavičkový soubor pro daughterboard.c
  */
 
-#ifndef __DAUGHTERBOARD_H__
-#define __DAUGHTERBOARD_H__
+#ifndef DAUGHTERBOARD_H
+#define DAUGHTERBOARD_H
 
 /*  ----      LED      ----     */
 #define DB_LED1_PORT GPIOG
@@ -56,11 +55,12 @@
 // ADC
 #define DB_VREF_PORT GPIOF
 #define DB_VREF_PIN GPIO_PIN_7
-#define DB_VTEMP_PORT GIPOF
+#define DB_VTEMP_PORT GPIOF
 #define DB_VTEMP_PIN GPIO_PIN_6
-#define DB_CHANNEL_VREF  ADC2_CHANNEL_15      // 2496 mV
+#define DB_UREF_MV 2495  // napětí reference TL431 v mV
+#define DB_CHANNEL_VREF  ADC2_CHANNEL_15
 #define DB_CHANNEL_VTEMP ADC2_CHANNEL_14
 
 
-#endif
+#endif /* DAUGHTERBOARD_H */
 
