@@ -1,50 +1,15 @@
 #ifndef DELAY_H
 #define DELAY_H
 
+#include <stdint.h>
+
 #ifndef F_CPU
-#warning F_CPU is not defined!
+#error F_CPU is not defined! Nastav F_CPU v Makefile.
 #endif /* F_CPU */
 
-#include "stm8s.h"
-
-void delay_us(uint8_t us);
-void delay_ms(uint16_t us);
-/* 
- * Func delayed N cycles, where N = 3 + ( ticks * 3 )
- * so, ticks = ( N - 3 ) / 3, minimum delay is 6 CLK
- * when tick = 1, because 0 equels 65535
- */
-
-static inline void _delay_cycl( unsigned short __ticks )
-{
-#if defined(__CSMC__)
-/* COSMIC */
-  //#define T_COUNT(x) ((( F_CPU * x / 1000000UL )-3)/3) // původní varianta byla přesnější ale hrozila podtíkáním
-	#define T_COUNT(x) (( F_CPU * x / 1000000UL ))/3+1
-	// ldw X, __ticks ; insert automaticaly
-	_asm("nop\n $N:\n decw X\n jrne $L\n nop\n ", __ticks);
-#elif defined(__SDCC)
-    //#define T_COUNT(x) ((( F_CPU * x / 1000000UL )-5)/5) // původní varianta byla přesnější ale hrozila podtíkáním
-    #define T_COUNT(x) ((( F_CPU * x / 1000000UL ))/8+1)
-	__asm__("nop\n nop\n"); 
-	do { 		// ASM: ldw X, #tick; lab$: decw X; tnzw X; jrne lab$
-                __ticks--;//      2c;                 1c;     2c    ; 1/2c   
-        } while ( __ticks );
-	__asm__("nop\n");
-#elif defined(__RCST7__)
-/* RAISONANCE */
-  #error ToDo for RAISONANCE
-#elif defined(__ICCSTM8__)
-/* IAR */
-  #error ToDo for IAR
-#else
- #error Unsupported Compiler!          /* Compiler defines not found */
-#endif /* __CSMC__ / __SDCC / __RCST7__ / __ICCSTM8__ */
-}
-
-static inline void _delay_us( const unsigned short __us ){
-	_delay_cycl( (unsigned short)( T_COUNT(__us) ));
-}
-
+// Aktivní čekání (busy wait) odvozené od F_CPU. Přerušení zpoždění natahuje.
+// Přesnost: viz tabulka změřených cyklů v src/delay.c.
+void delay_us(uint16_t us);     // 0 = hned návrat
+void delay_ms(uint16_t ms);     // 0 = hned návrat
 
 #endif /* DELAY_H */
