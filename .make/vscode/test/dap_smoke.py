@@ -2,7 +2,7 @@
 """Spike: how does `stm8-gdb -i dap` behave on the real chip? Uses the unmodified .make/gdbinit.
 
 Run with the Nucleo connected:  STM8_HW=1 python3 .make/vscode/test/dap_smoke.py
-Prints PASS/FAIL/INFO per gate (G1..G10, see .make/vscode/SPIKE.md) and the observed values.
+Prints PASS/FAIL/INFO per gate (G1..G10: start sequence, errors, data, pause, disconnect, breakpoints, repl, output) and the observed values.
 """
 import base64
 import os

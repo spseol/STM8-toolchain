@@ -62,6 +62,6 @@ The output of gdb is in the *STM8 debug* output channel.
 it through a small proxy (`src/adapter.js`): it attaches gdb to the chip through OpenOCD, loads the
 program with the `run` command, answers hovers over registers whose read clears flags, and ends the
 session with a message instead of hanging. The peripheral registers come from the same `.make/stm8sfr.py`
-that serves cgdb (`sfr-json`, `sfr-set`). Design, plan and the spike with measurements:
-`DESIGN.md`, `PLAN.md`, `SPIKE.md`. Tests: `pytest .make/vscode`, `node --test .make/vscode/test/*.test.js`
+that serves cgdb (`sfr-json`, `sfr-set`). Design, plan and the spike measurements are in the git history
+(commits `0b2c908`, `02d222e`). Tests: `pytest .make/vscode`, `node --test .make/vscode/test/*.test.js`
 (`STM8_HW=1` adds the tests that flash the connected board).

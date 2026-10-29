@@ -99,7 +99,7 @@ def gdb_init(commands, ui=None, cwd=ROOT, timeout=120):
 
 
 def start_dap(info=None):
-    """DapClient on `stm8-gdb -i dap`, started like the VS Code extension will do it (SPIKE.md):
+    """DapClient on `stm8-gdb -i dap`, started like the VS Code extension does it:
     initialize, attach, configurationDone, repl `run`. Returns (client, thread_id) stopped in main()."""
     from dapclient import DapClient
 

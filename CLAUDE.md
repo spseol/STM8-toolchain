@@ -104,12 +104,12 @@ Po `monitor reset halt` je nutné `maintenance flush register-cache`. `monitor r
 
 ## Ladění ve VS Code / VSCodium
 
-Rozšíření `spseol.stm8-toolchain` je v `.make/vscode/` (čistý JS bez npm; návrh `DESIGN.md`, plán `PLAN.md`, měření `SPIKE.md`). `make vscode` ho zabalí (`pack.py`, VSIX je zip) a nainstaluje do `code` a `codium` z `PATH` (`IDES=…` vybírá). Typ ladění je `stm8`.
+Rozšíření `spseol.stm8-toolchain` je v `.make/vscode/` (čistý JS bez npm; návrh, plán a měření spiku jsou v historii gitu, commity `0b2c908` a `02d222e`). `make vscode` ho zabalí (`pack.py`, VSIX je zip) a nainstaluje do `code` a `codium` z `PATH` (`IDES=…` vybírá). Typ ladění je `stm8`.
 - `F5` spustí úlohu `stm8: build` (`make debug-files`), pak `stm8-gdb -q -i dap -x .make/gdbinit` s `STM8_UI=dap`. Mezi VS Code a gdb je proxy `src/adapter.js`: `launch` → DAP `attach {program, target}`, po `configurationDone` repl příkaz `run`, timeouty a hlášky místo zavěšení, hover nad registry s vedlejším efektem se nečte.
 - `.make/vscode.mk` (načítá ho `-include` na konci `Makefile`; jen `Makefile-sdcc`, ne `-gas`/`-sdccrm`): `dap-info` (JSON s cestami, příkazem OpenOCD a `gdbTarget`), `debug-files`, `vscode`. `make switch-device CHIP=stm8s103f3` přepne čip bez dotazů; `.make/devices.py` nabízí jen čipy, pro které existuje `../SPLSPL/mk/<DEVICE>.mk`.
 - `stm8gdb.py` v režimu `STM8_UI=dap`: žádný banner ani `display`, `set style enabled off`, `is_connected()` pozná i spojení z DAP `attach`, `reload()` při chybě vyhodí `GdbError`, hlídání ELF a `on_exit` (reset + resume) fungují stejně jako v cgdb.
 - `stm8sfr.py`: příkazy `sfr-json [PERIF[.REG] …]` (jeden řádek JSON; bez argumentu struktura bez hodnot a bez čipu) a `sfr-set PERIF.REG[.POLE] HODNOTA`. Rozšíření strukturu čte offline (`stm8-gdb -batch`), hodnoty přes repl `evaluate`.
-- gdb DAP za běhu programu odpovídá `notStopped`; po `attach` se chyba připojení neprojeví (kontroluje `is_connected()` v příkazu `run`). Viz `SPIKE.md`.
+- gdb DAP za běhu programu odpovídá `notStopped`; po `attach` se chyba připojení neprojeví (kontroluje `is_connected()` v příkazu `run`). Změřeno spikem `test/dap_smoke.py`.
 - Testy: `pytest .make/vscode` a `node --test .make/vscode/test/*.test.js`; `STM8_HW=1` přidá testy, které nahrávají do připojeného Nucleo.
 - Ochrana před čtením registrů s vedlejším efektem: hover je v proxy odbytý textem (guard.js), tree je čte jen přes ikonu *Read*, `sfr-set` odmítne zápis pole do takového registru (read-modify-write by ho přečetl). Když se model SFR nenačte, platí pevný `DEFAULT_SIDE_EFFECTS` v `guard.js`; musí se shodovat s `READ_SIDE_EFFECT` v `stm8sfr.py` (hlídá test).
 - Po neúspěšném buildu (`preLaunchTask`) rozšíření F5 zruší, aby „Debug Anyway“ nenahrál starý ELF. Preflight (gdb ≥ 15, openocd, ST-Link, `.debug-session`, ELF) běží až po buildu, v `resolveDebugConfigurationWithSubstitutedVariables`.
