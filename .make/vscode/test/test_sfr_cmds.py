@@ -106,9 +106,9 @@ def test_set_roundtrip():
 
 @pytest.mark.hw
 def test_gpio_pin_write():
-    proc = gdb_batch(["sfr-set GPIOA.ODR.PIN7 1", "sfr-json GPIOA.ODR"], hw=True)
-    (gpioa,) = json_lines(proc)
-    assert reg(periph(gpioa, "GPIOA"), "ODR")["value"] & 0x80
+    proc = gdb_batch(["sfr-set GPIOD.ODR.PIN7 1", "sfr-json GPIOD.ODR"], hw=True)
+    (gpiod,) = json_lines(proc)
+    assert reg(periph(gpiod, "GPIOD"), "ODR")["value"] & 0x80  # GPIOA latches nothing on this board
 
 
 @pytest.mark.hw
