@@ -108,7 +108,7 @@ def test_set_roundtrip():
 def test_gpio_pin_write():
     proc = gdb_batch(["sfr-set GPIOD.ODR.PIN7 1", "sfr-json GPIOD.ODR"], hw=True)
     (gpiod,) = json_lines(proc)
-    assert reg(periph(gpiod, "GPIOD"), "ODR")["value"] & 0x80  # GPIOA latches nothing on this board
+    assert reg(periph(gpiod, "GPIOD"), "ODR")["value"] & 0x80  # PA0 and PA7 do not exist on the 64-pin STM8S208R
 
 
 @pytest.mark.hw
