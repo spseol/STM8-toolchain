@@ -14,7 +14,16 @@ MAKEFLAGS += --load-average=$(shell nproc)
 #DEVICE_FLASH=stm8s105c6
 DEVICE_FLASH=stm8s208rb
 
-F_CPU=16000000
+# Frekvence CPU v Hz. Výchozí: interní oscilátor HSI (HSI_VALUE z SPL) / HSI_DIV.
+# HSI_DIV musí odpovídat CLK_HSIPrescalerConfig() v init() (po resetu čipu je 8!).
+# Při použití vnějšího krystalu přepiš F_CPU ručně (např. F_CPU=8000000).
+HSI_DIV=1
+HSI_VALUE:=$(shell grep 'define[[:space:]]*HSI_VALUE' ../SPLSPL/inc/stm8s.h 2>/dev/null | grep -o '[0-9]\{4,\}' | head -1)
+ifeq ($(HSI_VALUE),)
+  HSI_VALUE=16000000
+endif
+F_CPU?=$(shell echo $$(( $(HSI_VALUE) / $(HSI_DIV) )))
+#F_CPU=8000000
 
 ##############################################################################
 ##############################################################################
