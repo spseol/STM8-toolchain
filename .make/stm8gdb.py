@@ -3,6 +3,7 @@
 # Načítá se z .make/gdbinit (make debug, make cgdb, make gdb).
 import os
 import re
+import shlex
 import subprocess
 import threading
 
@@ -27,6 +28,7 @@ state = {
     "autovars": True,  # vypisovat proměnné po každém zastavení
     "displays_pending": [],  # display ze souboru, které ještě nejdou vytvořit
     "displays_saved": None,  # naposledy uložený obsah DISPLAY_FILE
+    "watching": False,  # běží vlákno hlídající změnu ELF
 }
 stop_watch = threading.Event()
 
@@ -41,6 +43,8 @@ def warn(msg):
 
 
 def elf_stamp():
+    if state["elf"] is None:  # v režimu DAP se ELF načte až příkazem attach
+        state["elf"] = gdb.current_progspace().filename
     try:
         st = os.stat(state["elf"])
     except (OSError, TypeError):
@@ -51,6 +55,21 @@ def elf_stamp():
 def target_running():
     thread = gdb.selected_thread()
     return thread is not None and thread.is_running()
+
+
+def dap_mode():
+    """gdb běží jako DAP server pro rozšíření VS Code (.make/vscode/)."""
+    return os.environ.get("STM8_UI") == "dap"
+
+
+def is_connected():
+    """Připojení udělal connect(), nebo DAP attach (target remote)."""
+    if state["connected"]:
+        return True
+    try:
+        return gdb.selected_inferior().connection_num is not None
+    except AttributeError:
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +111,15 @@ def write_session():
         pass
 
 
+def pipe_target(openocd, log):
+    """`target extended-remote` argument: OpenOCD on a pipe. gdb runs it through sh, so LOG is quoted.
+    .make/vscode/dap_info.py builds the same string (gdbTarget)."""
+    return (
+        f'| {openocd} -c "gdb_port pipe" -c "telnet_port disabled"'
+        f' -c "tcl_port disabled" 2>{shlex.quote(log)}'
+    )
+
+
 def connect():
     """Připojí gdb k čipu. OpenOCD spustí sám přes pipe a skončí spolu s gdb.
 
@@ -99,10 +127,7 @@ def connect():
     openocd = os.environ.get("STM8_OPENOCD")
     log = os.environ.get("STM8_OPENOCD_LOG", "openocd.log")
     tcp = f"localhost:{GDB_PORT}"
-    pipe = (
-        f'| {openocd} -c "gdb_port pipe" -c "telnet_port disabled"'
-        f' -c "tcl_port disabled" 2>{log}'
-    )
+    pipe = pipe_target(openocd, log)
     if tcp_listening(GDB_PORT) or not openocd:
         targets = [tcp] + ([pipe] if openocd else [])
     else:
@@ -121,7 +146,7 @@ def connect():
 
 
 def ensure_connected():
-    if state["connected"]:
+    if is_connected():
         return
     say("Připojuji se k čipu…", "1;36")
     if connect():
@@ -183,12 +208,18 @@ def restart():
 def reload(reason):
     """Nahraje aktuální ELF do čipu, resetuje a zastaví na main()."""
     ensure_connected()
+    if dap_mode():
+        write_session()
     say(reason, "1;33")
     try:
         load()
         restart()
+        if dap_mode():
+            start_watcher()
     except gdb.error as e:
         warn(f"Nahrání selhalo: {e}")
+        if dap_mode():  # příkaz run v rozšíření musí selhat, ne jen varovat
+            raise gdb.GdbError(f"Nahrání selhalo: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -213,9 +244,15 @@ def watch():
         last = stamp
 
 
+def start_watcher():
+    if not state["watching"]:
+        state["watching"] = True
+        threading.Thread(target=watch, daemon=True).start()
+
+
 def on_elf_changed():
     state["queued"] = False
-    if not state["connected"] or state["busy"]:
+    if not is_connected() or state["busy"]:
         return
     if elf_stamp() in (None, state["loaded"]):
         return
@@ -233,6 +270,8 @@ def on_stop(event):
         state["pending"] = False
         gdb.post_event(lambda: reload("\nNahrávám nový program do čipu…"))
         return
+    if dap_mode():  # proměnné a display ukazuje VS Code
+        return
     save_displays()
     if state["autovars"] and not state["busy"]:
         show_vars()
@@ -247,10 +286,11 @@ def on_prompt():
 
 def on_exit(event):
     stop_watch.set()
-    save_displays()
+    if not dap_mode():
+        save_displays()
     # po ukončení ladění ať program v čipu běží znovu od začátku
     # (`monitor reset run` hlásí přes gdb „Protocol error with Rcmd“ a čip stojí)
-    if state["connected"]:
+    if is_connected():
         try:
             if not target_running():
                 gdb.execute("monitor reset halt", to_string=True)
@@ -474,7 +514,7 @@ Nahrazuje původní run/start, které s OpenOCD nefungují (F5 v cgdb)."""
 
     def invoke(self, arg, from_tty):
         self.dont_repeat()
-        if not state["connected"] or elf_stamp() != state["loaded"]:
+        if not is_connected() or elf_stamp() != state["loaded"]:
             reload("Nahrávám do čipu…")
         else:
             restart()
@@ -543,13 +583,16 @@ def stm8_start():
     """Volá .make/gdbinit: připojení, nahrání, main(), hlídání ELF."""
     gdb.events.stop.connect(on_stop)
     gdb.events.gdb_exiting.connect(on_exit)
+    if dap_mode():  # start řídí rozšíření: attach, pak příkaz run
+        gdb.execute("set style enabled off")
+        return
     gdb.events.before_prompt.connect(on_prompt)
     load_displays()
     state["elf"] = gdb.current_progspace().filename
     if not state["elf"]:
         warn("gdb nemá ELF. Spusť ladění přes: make debug")
         return
-    threading.Thread(target=watch, daemon=True).start()
+    start_watcher()
     try:
         reload("Nahrávám do čipu…")
     except gdb.GdbError as e:
