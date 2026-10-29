@@ -38,12 +38,22 @@ DOCS=(
     "${DS}-datasheet.pdf|${DS_BASE}/${DS}.pdf"
 )
 
+MIN_SIZE=50000  # menší soubor je chybová stránka nebo zástupný prázdný soubor
+
+# platné PDF: dost velké a začíná "%PDF"
+is_ok() {
+    [ -s "$1" ] && [ "$(stat -c %s "$1")" -ge "$MIN_SIZE" ] && [ "$(head -c 4 "$1")" = "%PDF" ]
+}
+
 missing=()
 for d in "${DOCS[@]}"; do
-    if [ -f "docs/${d%%|*}" ]; then
-        echo "${G}✔${N} docs/${d%%|*} už je stažený"
+    f="docs/${d%%|*}"
+    if is_ok "$f"; then
+        echo "${G}✔${N} $f ($(du -h "$f" | cut -f1))"
     else
         missing+=("$d")
+        # prázdný zástupný soubor; neúplný nebo vadný soubor se přepíše také
+        : > "$f"
     fi
 done
 
@@ -52,12 +62,13 @@ done
 echo
 echo "${Y}${B}Dokumentaci je potřeba stáhnout ručně.${N}"
 echo "ST stahování skriptem blokuje (ochrana proti robotům),"
-echo "proto se nic nestahuje samo. Postup:"
+echo "proto se nic nestahuje samo. Ve složce ${B}docs/${N} jsou prázdné"
+echo "zástupné soubory. Postup:"
 echo
 echo "  1. Otevři odkaz v prohlížeči (v terminálu Ctrl+klik na URL)."
 echo "  2. Pokud ST ukáže dotaz na souhlas nebo ověření, potvrď ho."
-echo "  3. Ulož PDF do složky ${B}$PWD/docs/${N} pod uvedeným názvem."
-echo "  4. Spusť ${B}make docs-download${N} znovu, ověří, že soubory jsou na místě."
+echo "  3. Ulož PDF přes zástupný soubor ${B}$PWD/docs/…${N} a potvrď přepsání."
+echo "  4. Spusť ${B}make docs-download${N} znovu, ověří, že soubory jsou stažené."
 echo
 n=0
 for d in "${missing[@]}"; do
@@ -66,3 +77,4 @@ for d in "${missing[@]}"; do
     echo "  ${d#*|}"
     echo
 done
+exit 1
