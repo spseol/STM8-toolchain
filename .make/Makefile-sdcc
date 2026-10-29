@@ -380,7 +380,7 @@ baudrate:
 	@$(BAUDRATE_DETECT)
 
 switch-device: clean
-	+bash .make/switch_device.sh
+	+PYTHON=$(PYTHON) bash .make/switch_device.sh $(CHIP)
 
 ../SPL.tgz:
 	curl https://gitlab.com/spseol/mit-no/spl/-/archive/main/spl-main.tar.gz --output ../SPL.tgz

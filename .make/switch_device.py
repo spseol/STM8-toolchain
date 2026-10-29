@@ -6,7 +6,7 @@
 # Licence: GNU/GPL
 ############################################################################
 import sys
-from devices import DEVICES
+from devices import available
 
 try:
     from pick import pick
@@ -16,6 +16,10 @@ except ImportError:
 
 ############################################################################
 
+
+DEVICES = available()  # only what ../SPLSPL/mk can build
+if not DEVICES:
+    sys.exit("No chip can be selected: ../SPLSPL/mk has no usable file.")
 
 femilly, index = pick(list(DEVICES), "Vyber rodinu:")
 device, index = pick(list(DEVICES[femilly]), "Vyber čip:")
