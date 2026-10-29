@@ -1,0 +1,153 @@
+{
+  "name": "stm8-toolchain",
+  "displayName": "STM8 Toolchain Debugger",
+  "description": "Debug STM8S projects of the STM8S toolchain (SDCC, OpenOCD, stm8-gdb): F5, stepping, variables and peripheral registers.",
+  "version": "0.1.0",
+  "publisher": "spseol",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Debuggers"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "workspaceContains:.make/gdbinit",
+    "onDebugResolve:stm8"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "contributes": {
+    "breakpoints": [
+      {
+        "language": "c"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "stm8",
+        "label": "STM8 (stm8-gdb + OpenOCD)",
+        "languages": [
+          "c"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "stm8",
+            "request": "launch",
+            "name": "STM8 debug",
+            "preLaunchTask": "stm8: build"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "STM8: debug",
+            "description": "Build, load into the chip and stop in main()",
+            "body": {
+              "type": "stm8",
+              "request": "launch",
+              "name": "STM8 debug",
+              "preLaunchTask": "stm8: build"
+            }
+          }
+        ]
+      }
+    ],
+    "views": {
+      "debug": [
+        {
+          "id": "stm8Peripherals",
+          "name": "STM8 Peripherals",
+          "when": "debugType == 'stm8'"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "stm8.sfr.writeRegister",
+        "title": "STM8: Write Register…",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "stm8.sfr.editField",
+        "title": "STM8: Write Field…",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "stm8.sfr.readRegister",
+        "title": "STM8: Read Register",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "stm8.sfr.openRegister",
+        "title": "STM8: Open Register Detail",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "stm8.build",
+        "title": "STM8: Build"
+      },
+      {
+        "command": "stm8.flash",
+        "title": "STM8: Flash"
+      },
+      {
+        "command": "stm8.debug",
+        "title": "STM8: Debug"
+      },
+      {
+        "command": "stm8.pickChip",
+        "title": "STM8: Choose Chip…"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "stm8.sfr.writeRegister",
+          "when": "false"
+        },
+        {
+          "command": "stm8.sfr.editField",
+          "when": "false"
+        },
+        {
+          "command": "stm8.sfr.readRegister",
+          "when": "false"
+        },
+        {
+          "command": "stm8.sfr.openRegister",
+          "when": "false"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "stm8.sfr.writeRegister",
+          "when": "view == stm8Peripherals && viewItem =~ /^stm8\\.reg/",
+          "group": "inline@2"
+        },
+        {
+          "command": "stm8.sfr.readRegister",
+          "when": "view == stm8Peripherals && viewItem == stm8.reg.sideEffect",
+          "group": "inline@1"
+        },
+        {
+          "command": "stm8.sfr.editField",
+          "when": "view == stm8Peripherals && viewItem == stm8.field",
+          "group": "inline"
+        },
+        {
+          "command": "stm8.sfr.openRegister",
+          "when": "view == stm8Peripherals && viewItem =~ /^stm8\\.reg/",
+          "group": "inline@3"
+        }
+      ]
+    }
+  }
+}

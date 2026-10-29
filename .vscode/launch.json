@@ -2,27 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "gdb-stm8",
-            "type": "gdb",
-            "request": "attach",
-            "executable": "${workspaceRoot}/out.elf",
-            "gdbpath": "stm8-gdb",
-            "remote": true,
-            "target": ":3333",
-            "cwd": "${workspaceRoot}",
-            "autorun": [
-            ]
-        },
-        {
-            "type": "stm8-debug",
+            "name": "STM8 debug",
+            "type": "stm8",
             "request": "launch",
-            "name": "stm8-debug",
-            "serverType": "stm8-sdcc",
-            "executable": "${workspaceRoot}/out.elf",
-            "openOcdConfigs": [
-                "interface/stlink-dap.cfg",
-                "target/stm8s.cfg"
-            ]
+            "preLaunchTask": "stm8: build"
         }
     ]
 }
