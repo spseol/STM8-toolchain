@@ -361,7 +361,134 @@ Pozor: p UART1 i display UART1 přečtou UART1->DR, a tím smažou RXNE."""
         return [n for n in names if n.startswith(regname.upper())]
 
 
+# ---------------------------------------------------------------------------
+# příkazy pro rozšíření VS Code: sfr-json, sfr-set
+# ---------------------------------------------------------------------------
+
+
+def reg_json(reg, value, prev):
+    return {
+        "name": reg.name,
+        "addr": reg.addr,
+        "reset": reg.reset,
+        "desc": reg.desc,
+        "sideEffect": reg.side_effect,
+        "value": value,
+        "prev": prev,
+        "bits": [{"name": n, "mask": m, "desc": c} for n, m, c in reg.bits],
+    }
+
+
+def sfr_json(tokens):
+    """All peripherals as JSON; values only for what TOKENS name."""
+    if not sfr["periphs"]:
+        raise gdb.GdbError("Peripheral registers are not loaded. Start debugging with make debug.")
+    targets = [find(token) for token in tokens]
+    running = target_running()
+    if targets and running:
+        raise gdb.GdbError("Program is running, pause it first.")
+    reads = []
+    for periph, reg in targets:
+        reads += [r for r in periph.regs if not r.side_effect] if reg is None else [reg]
+    try:
+        values = read_regs(reads)
+    except gdb.MemoryError as e:
+        raise gdb.GdbError(f"Cannot read from the chip: {e}")
+    periphs = []
+    for periph in sorted(sfr["periphs"].values(), key=lambda p: p.base):
+        regs = []
+        for reg in periph.regs:
+            value = values.get(reg.addr)
+            regs.append(reg_json(reg, value, None if value is None else track(reg.addr, value)))
+        other = [{"name": name, "addr": addr} for name, addr in periph.other]
+        periphs.append({"name": periph.name, "base": periph.base, "regs": regs, "other": other})
+    return json.dumps({"running": running, "periphs": periphs}, separators=(",", ":"))
+
+
+class SfrJsonCommand(gdb.Command):
+    """Peripheral registers as one line of JSON (for the VS Code extension).
+Usage: sfr-json                 all peripherals and bits, no values (needs no chip)
+       sfr-json TIM4 [GPIOB …]  plus values; registers whose read clears flags are skipped
+       sfr-json UART1.DR        reads exactly that register"""
+
+    def __init__(self):
+        super().__init__("sfr-json", gdb.COMMAND_DATA)
+
+    def invoke(self, arg, from_tty):
+        self.dont_repeat()
+        gdb.write(sfr_json(arg.split()) + "\n")
+
+
+def merge_field(old, mask, value):
+    """OLD with the bits under MASK replaced by VALUE (counted from the lowest bit of the field)."""
+    low = (mask & -mask).bit_length() - 1
+    return (old & ~mask & 0xFF) | (value << low & mask)
+
+
+def parse_target(token):
+    """TIM4.CR1 or TIM4.CR1.CEN → (Periph, Reg, (name, mask, comment) or None)."""
+    name, _, rest = re.sub(r"->", ".", token.upper()).partition(".")
+    regname, _, bitname = rest.partition(".")
+    periph, reg = find(f"{name}.{regname}")
+    if reg is None:
+        raise gdb.GdbError(f"Use PERIPH.REG[.FIELD], got {token}")
+    if not bitname:
+        return periph, reg, None
+    for bit in reg.bits:
+        if bit[0] == bitname:
+            return periph, reg, bit
+    raise gdb.GdbError(f"{periph.name}.{reg.name} has no field {bitname}: " + " ".join(b[0] for b in reg.bits))
+
+
+class SfrSetCommand(gdb.Command):
+    """Write a peripheral register or one of its fields (the other bits stay).
+Usage: sfr-set TIM4.CR1 0x21     whole register
+       sfr-set TIM4.CR1.CEN 1    one field
+Prints the value written to the register."""
+
+    def __init__(self):
+        super().__init__("sfr-set", gdb.COMMAND_DATA)
+
+    def invoke(self, arg, from_tty):
+        self.dont_repeat()
+        tokens = arg.split()
+        if len(tokens) != 2:
+            raise gdb.GdbError("Usage: sfr-set PERIPH.REG[.FIELD] VALUE")
+        periph, reg, bit = parse_target(tokens[0])
+        where = f"{periph.name}.{reg.name}"
+        if bit is not None and reg.side_effect:  # a field write reads the register first
+            raise gdb.GdbError(
+                f"{where} cannot be changed field by field: reading it clears flags. "
+                f"Write the whole register: sfr-set {where} VALUE"
+            )
+        try:
+            value = int(tokens[1], 0)
+        except ValueError:
+            raise gdb.GdbError(f"Not a number: {tokens[1]}")
+        if bit is None:
+            if not 0 <= value <= 0xFF:
+                raise gdb.GdbError(f"Value {value} does not fit register {where} (8 bits)")
+        else:
+            width = (bit[1] >> ((bit[1] & -bit[1]).bit_length() - 1)).bit_length()
+            if not 0 <= value < 1 << width:
+                raise gdb.GdbError(
+                    f"Value {value} does not fit field {where}.{bit[0]} ({width} bit{'s' * (width > 1)})"
+                )
+        if target_running():
+            raise gdb.GdbError("Program is running, pause it first.")
+        inferior = gdb.selected_inferior()
+        try:
+            if bit is not None:
+                value = merge_field(bytes(inferior.read_memory(reg.addr, 1))[0], bit[1], value)
+            inferior.write_memory(reg.addr, bytes([value]))
+        except gdb.MemoryError as e:
+            raise gdb.GdbError(f"Cannot write to the chip: {e}")
+        gdb.write(f"{value}\n")
+
+
 SfrCommand()
+SfrJsonCommand()
+SfrSetCommand()
 gdb.pretty_printers.insert(0, sfr_printer)
 gdb.events.cont.connect(on_cont)
 load_sfr()
