@@ -58,6 +58,26 @@ def test_set_field_of_a_side_effect_register_is_refused():
     assert "sfr-set AWU.CSR VALUE" in proc.stderr
 
 
+def test_gpio_registers_have_pin_fields():
+    """stm8s.h has no per-bit macros for the GPIO registers: PIN0..PIN7 are made up."""
+    (model,) = json_lines(gdb_batch(["sfr-json"]))
+    gpioa = periph(model, "GPIOA")
+    for name in ("ODR", "IDR", "DDR", "CR1", "CR2"):
+        bits = reg(gpioa, name)["bits"]
+        assert sorted((b["name"], b["mask"]) for b in bits) == sorted((f"PIN{n}", 1 << n) for n in range(8)), name
+    assert {b["desc"] for b in reg(gpioa, "ODR")["bits"]} == {f"pin {n}" for n in range(8)}
+
+
+def test_gpio_idr_is_read_only():
+    (model,) = json_lines(gdb_batch(["sfr-json"]))
+    gpioa = periph(model, "GPIOA")
+    assert reg(gpioa, "IDR")["readOnly"] is True
+    assert reg(gpioa, "ODR")["readOnly"] is False
+    assert reg(periph(model, "TIM4"), "CR1")["readOnly"] is False
+    assert "GPIOA.IDR is read-only" in gdb_batch(["sfr-set GPIOA.IDR 1"]).stderr
+    assert "GPIOA.IDR is read-only" in gdb_batch(["sfr-set GPIOA.IDR.PIN0 1"]).stderr
+
+
 # --- on the chip ---------------------------------------------------------------------------
 
 
@@ -82,6 +102,13 @@ def test_set_roundtrip():
     arr, cr1 = json_lines(proc)
     assert reg(periph(arr, "TIM4"), "ARR")["value"] == 0x55
     assert reg(periph(cr1, "TIM4"), "CR1")["value"] & 0x80
+
+
+@pytest.mark.hw
+def test_gpio_pin_write():
+    proc = gdb_batch(["sfr-set GPIOA.ODR.PIN7 1", "sfr-json GPIOA.ODR"], hw=True)
+    (gpioa,) = json_lines(proc)
+    assert reg(periph(gpioa, "GPIOA"), "ODR")["value"] & 0x80
 
 
 @pytest.mark.hw

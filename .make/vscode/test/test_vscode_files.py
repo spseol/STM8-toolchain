@@ -106,6 +106,14 @@ def test_make_vscode_without_ide_explains(tmp_path):
 # --- .vscode -------------------------------------------------------------------------------
 
 
+def test_write_icon_is_hidden_for_read_only_registers():
+    menus = json.loads((VSCODE / "package.json").read_text())["contributes"]["menus"]["view/item/context"]
+    (write,) = [m for m in menus if m["command"] == "stm8.sfr.writeRegister"]
+    pattern = re.search(r"viewItem =~ /(.*)/", write["when"]).group(1)
+    assert re.match(pattern, "stm8.reg") and re.match(pattern, "stm8.reg.sideEffect")
+    assert not re.match(pattern, "stm8.reg.readOnly")
+
+
 def test_launch_json_is_one_stm8_configuration():
     launch = json.loads((ROOT / ".vscode" / "launch.json").read_text())
     assert launch["configurations"] == [

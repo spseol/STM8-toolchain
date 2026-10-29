@@ -34,7 +34,7 @@ const SCRIPT = `
  */
 function renderRegisterHtml(periph, reg, nonce, { running = false } = {}) {
   const known = reg.value !== null && reg.value !== undefined;
-  const editable = known && !running && !reg.sideEffect;
+  const editable = known && !running && !reg.sideEffect && !reg.readOnly;
   const changed = changedBits(reg);
   const fields = byMaskDescending(reg.bits);
 
@@ -43,6 +43,7 @@ function renderRegisterHtml(periph, reg, nonce, { running = false } = {}) {
   else if (!known) state = '<p class="note">not read (reading this register clears flags); use the Read icon in the tree.</p>';
   else {
     state = `<p>value <b>${hex(reg.value)}</b> (${binary(reg.value)})</p>`;
+    if (reg.readOnly) state += '<p class="note">This register is read-only.</p>';
     if (reg.sideEffect) state += '<p class="note">Single bits cannot be changed here: reading it clears flags. Write the whole register from the tree instead.</p>';
   }
 

@@ -129,7 +129,7 @@
       "view/item/context": [
         {
           "command": "stm8.sfr.writeRegister",
-          "when": "view == stm8Peripherals && viewItem =~ /^stm8\\.reg/",
+          "when": "view == stm8Peripherals && viewItem =~ /^stm8\\.reg(\\.sideEffect)?$/",
           "group": "inline@2"
         },
         {

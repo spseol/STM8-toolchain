@@ -166,6 +166,18 @@ test('bits_of_a_side_effect_register_are_display_only', async () => {
   assert.strictEqual(fields[1].contextValue, 'stm8.field.readOnly');
 });
 
+test('read_only_register_is_display_only', async () => {
+  const idr = periph('GPIOA', 0x5000, [reg('IDR', 0x5001, { readOnly: true, value: 1, bits: [{ name: 'PIN0', mask: 1, desc: 'pin 0' }] })]);
+  const tree = new SfrTree(api, async () => '');
+  tree.setModel({ periphs: [idr], sideEffects: {} });
+  const [node] = await children(tree);
+  const [regNode] = await children(tree, node);
+  assert.strictEqual(tree.getTreeItem(regNode).contextValue, 'stm8.reg.readOnly');
+  const [pin] = await items(tree, await children(tree, regNode));
+  assert.strictEqual(pin.checkboxState, undefined);
+  assert.strictEqual(pin.contextValue, 'stm8.bit.readOnly');
+});
+
 // --- review fixes -------------------------------------------------------------------------
 
 test('pinned_peripheral_is_read_although_collapsed', async () => {

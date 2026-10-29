@@ -58,6 +58,12 @@ test('unread_register_says_so_and_has_no_click_targets', () => {
   assert.ok(!out.includes('data-bit='));
 });
 
+test('read_only_register_is_display_only', () => {
+  const out = html({ readOnly: true });
+  assert.ok(!out.includes('data-bit='));
+  assert.match(out, /read-only/);
+});
+
 test('running_program_disables_editing', () => {
   const out = renderRegisterHtml(periph, reg(), 'n', { running: true });
   assert.match(out, /running/);

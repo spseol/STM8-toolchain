@@ -29,6 +29,7 @@ Expand one to read its registers at every stop. Changes since the previous stop 
 | action | |
 |:--- |:- |
 | tick a single-bit field | writes that bit (the other bits stay) |
+| GPIO `ODR`, `DDR`, `CR1`, `CR2` | `stm8s.h` has no bit names for them, so the fields `PIN0` … `PIN7` are made up; `IDR` is read-only |
 | pencil on a register / multi-bit field | asks for a value (decimal, `0x…` or `0b…`) |
 | open icon on a register | tab with all bits, descriptions and the reset value |
 | *Read* icon (`UART1.DR`, `SPI.DR`, `I2C.DR`, …) | reads a register whose read clears flags; the tree and a hover in the code never read it, but a Watch expression, the Debug Console and `p UART1` do, because you typed them |

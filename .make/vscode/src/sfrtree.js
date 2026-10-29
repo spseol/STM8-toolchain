@@ -157,7 +157,7 @@ class SfrTree {
     item.tooltip = `${periph.name}->${reg.name}  ${hex4(reg.addr)}${reg.desc ? `\n${reg.desc}` : ''}`
       + `${reg.reset === null ? '' : `\nreset value 0x${reg.reset.toString(16).padStart(2, '0')}`}`;
     if (!this.running && changedBits(reg)) item.iconPath = new ThemeIcon('circle-filled', new ThemeColor('charts.yellow'));
-    item.contextValue = reg.sideEffect ? 'stm8.reg.sideEffect' : 'stm8.reg';
+    item.contextValue = `stm8.reg${reg.sideEffect ? '.sideEffect' : ''}${reg.readOnly ? '.readOnly' : ''}`;
     return item;
   }
 
@@ -168,8 +168,8 @@ class SfrTree {
     const item = new TreeItem(`${high === low ? low : `${high}:${low}`} ${bit.name}`, State.None);
     item.id = `${periph.name}.${reg.name}.${bit.name}`;
     item.tooltip = bit.desc;
-    // a field write reads the register first: not for registers whose read clears flags
-    const editable = !reg.sideEffect;
+    // a field write reads the register first: not for registers whose read clears flags; and not for read-only ones
+    const editable = !reg.sideEffect && !reg.readOnly;
     item.contextValue = `${isSingleBit(bit) ? 'stm8.bit' : 'stm8.field'}${editable ? '' : '.readOnly'}`;
     const known = !this.running && reg.value !== null && reg.value !== undefined;
     if (known) {

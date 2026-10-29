@@ -25,6 +25,12 @@ READ_SIDE_EFFECT = {
     "AWU": {"CSR"},  # AWUF
 }
 
+# stm8s.h has no per-bit macros for the GPIO registers, so their pins are made up: PIN7 … PIN0.
+GPIO_PIN_REGS = {"ODR", "IDR", "DDR", "CR1", "CR2"}
+GPIO_PINS = [(f"PIN{n}", 1 << n, f"pin {n}") for n in range(7, -1, -1)]
+# registers the program cannot write
+READ_ONLY = {"GPIO": {"IDR"}}
+
 
 class Reg:
     def __init__(self, periph, name, addr, bits, reset, desc):
@@ -35,6 +41,7 @@ class Reg:
         self.reset = reset
         self.desc = desc
         self.side_effect = name in READ_SIDE_EFFECT.get(periph.prefix, ())
+        self.read_only = name in READ_ONLY.get(periph.prefix, ())
 
 
 class Periph:
@@ -115,6 +122,8 @@ def load_sfr():
             key = (prefix, field.name)
             # obecné masky pro číslované registry: TIM1_CCMR_OCM pro CCMR1…4
             regbits = bits.get(key) or bits.get((prefix, re.sub(r"\d+$", "", field.name)), [])
+            if not regbits and prefix == "GPIO" and field.name in GPIO_PIN_REGS:
+                regbits = GPIO_PINS
             reg = Reg(periph, field.name, addr, regbits, resets.get(key), desc.get(field.name, ""))
             periph.regs.append(reg)
             sfr["regs"][addr] = reg
@@ -373,6 +382,7 @@ def reg_json(reg, value, prev):
         "reset": reg.reset,
         "desc": reg.desc,
         "sideEffect": reg.side_effect,
+        "readOnly": reg.read_only,
         "value": value,
         "prev": prev,
         "bits": [{"name": n, "mask": m, "desc": c} for n, m, c in reg.bits],
@@ -456,6 +466,8 @@ Prints the value written to the register."""
             raise gdb.GdbError("Usage: sfr-set PERIPH.REG[.FIELD] VALUE")
         periph, reg, bit = parse_target(tokens[0])
         where = f"{periph.name}.{reg.name}"
+        if reg.read_only:
+            raise gdb.GdbError(f"{where} is read-only")
         if bit is not None and reg.side_effect:  # a field write reads the register first
             raise gdb.GdbError(
                 f"{where} cannot be changed field by field: reading it clears flags. "
