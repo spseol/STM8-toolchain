@@ -24,28 +24,45 @@ case "$DEVICE" in
         ;;
 esac
 
-download() {
-    local url="$1"
-    local out="$2"
-    if [ -f "$out" ]; then
-        echo "Already exists: $out"
-    else
-        echo "Downloading: $out"
-        curl -L --fail --http1.1 --progress-bar -o "$out" "$url" || { rm -f "$out"; exit 1; }
-    fi
-}
-
-print_url() {
-    local url="$1"
-    local out="$2"
-    if [ -f "docs/$out" ]; then
-        echo "Already exists: docs/$out"
-    else
-        echo "Save as docs/$out:"
-        echo "  $url"
-    fi
-}
+if [ -t 1 ]; then
+    B=$'\e[1m'; G=$'\e[32m'; Y=$'\e[33m'; C=$'\e[36m'; N=$'\e[0m'
+else
+    B=""; G=""; Y=""; C=""; N=""
+fi
 
 mkdir -p docs
-print_url "$RM_URL" "RM0016-STM8S-reference-manual.pdf"
-print_url "${DS_BASE}/${DS}.pdf" "${DS}-datasheet.pdf"
+
+# dvojice "soubor|URL"
+DOCS=(
+    "RM0016-STM8S-reference-manual.pdf|$RM_URL"
+    "${DS}-datasheet.pdf|${DS_BASE}/${DS}.pdf"
+)
+
+missing=()
+for d in "${DOCS[@]}"; do
+    if [ -f "docs/${d%%|*}" ]; then
+        echo "${G}✔${N} docs/${d%%|*} už je stažený"
+    else
+        missing+=("$d")
+    fi
+done
+
+[ ${#missing[@]} -eq 0 ] && exit 0
+
+echo
+echo "${Y}${B}Dokumentaci je potřeba stáhnout ručně.${N}"
+echo "ST stahování skriptem blokuje (ochrana proti robotům),"
+echo "proto se nic nestahuje samo. Postup:"
+echo
+echo "  1. Otevři odkaz v prohlížeči (v terminálu Ctrl+klik na URL)."
+echo "  2. Pokud ST ukáže dotaz na souhlas nebo ověření, potvrď ho."
+echo "  3. Ulož PDF do složky ${B}$PWD/docs/${N} pod uvedeným názvem."
+echo "  4. Spusť ${B}make docs-download${N} znovu, ověří, že soubory jsou na místě."
+echo
+n=0
+for d in "${missing[@]}"; do
+    n=$((n + 1))
+    echo "${B}Soubor $n z ${#missing[@]}:${N} ${C}docs/${d%%|*}${N}"
+    echo "  ${d#*|}"
+    echo
+done
