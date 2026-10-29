@@ -9,3 +9,4 @@ CLAUDE.md
 .debug-session
 .make/cgdb/*
 !.make/cgdb/cgdbrc
+.make/vscode/*.vsix

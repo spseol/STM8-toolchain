@@ -408,3 +408,6 @@ docs-download:
 
 lib:
 	@bash .make/lib-mv.sh
+
+# VS Code extension: dap-info, debug-files (see .make/vscode/)
+-include .make/vscode.mk
