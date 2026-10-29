@@ -72,6 +72,7 @@ endif
 | `make stm8flash` | záložní metoda nahrávání (používá [stm8flash](https://github.com/vdudouyt/stm8flash)) |
 | `make stm8flash-unlock` | odstraní ochranu čtení přes stm8flash |
 | `make debug` | ladění jedním příkazem: přeloží elf, nahraje ho, zastaví na `main()` a otevře [cgdb](https://cgdb.github.io/) (bez cgdb gdb TUI), viz [Ladění](#ladění) |
+| `make vscode` | nainstaluje rozšíření pro ladění do VS Code / VSCodium (jednou na počítač), viz [VS Code](#vs-code--vscodium) |
 | `make cgdb` | totéž co `make debug` |
 | `make gdb` | totéž, ale v STM8-gdb TUI módu |
 | `make openocd` | spustí samostatný OpenOCD na portu 3333 (pro ruční připojení; `make debug` ho nepotřebuje) |
@@ -135,6 +136,26 @@ nahraje nový a zastaví na `main()`. Totéž udělá příkaz `flash` v gdb.
 Konfigurace je v `.make/gdbinit`, `.make/stm8gdb.py` a `.make/stm8sfr.py`; log OpenOCD
 v `build-*-elf/openocd.log`. Soubor `.debug-display` (jeden výraz na řádek)
 jde upravit i ručně, třeba připravit k příkladu sledované proměnné.
+
+
+### VS Code / VSCodium
+
+Stejné ladění funguje ve VS Code (nebo VSCodium) s rozšířením z `.make/vscode/`:
+
+1. `make vscode` rozšíření zabalí a nainstaluje (`code` nebo `codium` musí být v `PATH`; stačí jednou na počítač).
+2. Restartuj editor a otevři složku s projektem.
+3. Stiskni `F5`. Projekt se přeloží, nahraje do chipu a program se zastaví na `main()`.
+
+Breakpointy, krokování, proměnné i registry procesoru fungují jako obvykle. Panel **STM8 Peripherals**
+v *Run and Debug* ukazuje periferie tvého čipu: zaškrtnutím bitu ho změníš, tužka zapíše celý registr,
+ikona otevření ukáže jeden registr podrobně s popisy. Co se od minulého zastavení změnilo, je žlutě.
+Strom nečte `UART1->DR` a podobné registry (čtení maže příznaky), dokud neklikneš na *Read*, a najetí
+myší na ně ve zdrojáku je nepřečte; Watch, Debug Console a `p UART1` je přečtou, protože jsi o to požádal.
+Jednotlivé bity takových registrů nejdou měnit (zápis by registr nejdřív přečetl), zapisuj celý registr. Ve stavovém řádku je *Build*, *Flash*, *Debug* a cílový čip
+(kliknutím ho přepneš). Podrobnosti a řešení potíží:
+[`.make/vscode/README.md`](.make/vscode/README.md).
+
+Potřebuje `stm8-gdb` 15 nebo novější a `openocd` v `PATH`, stejně jako `make debug`.
 
 
 ## Závislosti

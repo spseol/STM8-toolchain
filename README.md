@@ -71,6 +71,7 @@ endif
 | `make stm8flash-unlock` | removes read protection via stm8flash |
 | `make debug` | one-command debugging: builds the elf, uploads it, stops at `main()` and opens [cgdb](https://cgdb.github.io/) (gdb TUI without cgdb), see [Debugging](#debugging) |
 | `make cgdb` | same as `make debug` |
+| `make vscode` | installs the debugger extension into VS Code / VSCodium (once per computer), see [VS Code](#vs-code--vscodium) |
 | `make gdb` | same, but in STM8-gdb TUI mode |
 | `make openocd` | starts a standalone OpenOCD on port 3333 (for manual connection; `make debug` does not need it) |
 | `make miniterm` | starts serial terminal (pyserial-miniterm) on the first `/dev/ttyUSB*`/`/dev/ttyACM*`, speed detected from the project (`UARTx_Init()` or BRR register writes), override with `BAUD=`, default 115200; alias `make pyserial` |
@@ -135,6 +136,27 @@ does the same.
 The configuration is in `.make/gdbinit`, `.make/stm8gdb.py` and
 `.make/stm8sfr.py`; the OpenOCD log is in `build-*-elf/openocd.log`. The `.debug-display` file (one expression
 per line) can be edited by hand, e.g. to ship watched variables with an example.
+
+
+### VS Code / VSCodium
+
+The same debugging works in VS Code (or VSCodium) with the extension from `.make/vscode/`:
+
+1. `make vscode` packages the extension and installs it (`code` or `codium` must be in `PATH`; once per computer).
+2. Restart the editor and open the project folder.
+3. Press `F5`. The project is built, uploaded to the chip and the program stops at `main()`.
+
+Breakpoints, stepping, variables and CPU registers work as usual. The **STM8 Peripherals** view
+in *Run and Debug* shows the peripherals of your chip: tick a bit to change it, the pencil writes a
+whole register, the open icon shows one register in detail with descriptions. What changed since
+the previous stop is yellow. The tree does not read `UART1->DR` and similar registers (reading clears flags)
+until you click *Read*, and a hover over them in the code does not read them either;
+a Watch expression, the Debug Console and `p UART1` do, because you asked for it.
+Single bits of such registers cannot be changed (the write would read the register first), write the whole register. The status bar
+has *Build*, *Flash*, *Debug* and the target chip (click it to switch). Details and troubleshooting:
+[`.make/vscode/README.md`](.make/vscode/README.md).
+
+It needs `stm8-gdb` 15 or newer and `openocd` in `PATH`, as `make debug` does.
 
 
 ## Dependencies
