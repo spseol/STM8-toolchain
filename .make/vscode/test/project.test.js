@@ -46,7 +46,7 @@ test('other_openocd_false_when_pgrep_finds_none', async () => {
 
 // --- Task 9: errors, preflight, version notice -------------------------------------------
 
-const { ToolchainError, preflight, versionNotice } = require('../src/project');
+const { ToolchainError, preflight, versionNotice, upgradeOffer } = require('../src/project');
 
 const rejecting = (stderr, code = 2) => async () => {
   throw Object.assign(new Error('make failed'), { stderr, code });
@@ -56,7 +56,40 @@ test('old_toolchain_message', async () => {
   await assert.rejects(
     readProjectInfo('/p', { exec: rejecting("make: *** No rule to make target 'dap-info'.  Stop.") }),
     (error) => error instanceof ToolchainError
-      && /Old toolchain – update \.make\/ and add the line -include \.make\/vscode\.mk to Makefile/.test(error.message),
+      && /Old toolchain – run STM8: Update Toolchain \(or update \.make\/ by hand and add the line -include \.make\/vscode\.mk to Makefile\)/.test(error.message)
+      && error.fix === 'updateToolchain',
+  );
+});
+
+test('other_toolchain_errors_have_no_fix', async () => {
+  await assert.rejects(
+    readProjectInfo('/p', { exec: rejecting('Makefile:181: *** boom.  Stop.') }),
+    (error) => error instanceof ToolchainError && error.fix === undefined,
+  );
+});
+
+test('unresolved_conflict_in_makefile_stops_before_make_runs', async () => {
+  const dir = tmp();
+  fs.writeFileSync(path.join(dir, 'Makefile'), 'A=1\n<<<<<<< Makefile\nB=2\n=======\nB=3\n>>>>>>> FETCH_HEAD\n');
+  let called = false;
+  const exec = async () => { called = true; return { stdout: '{}' }; };
+  await assert.rejects(
+    readProjectInfo(dir, { exec }),
+    (error) => error instanceof ToolchainError && /unresolved conflicts/.test(error.message),
+  );
+  assert.strictEqual(called, false);
+});
+
+test('makefile_without_conflict_markers_goes_on_to_make', async () => {
+  const dir = tmp();
+  fs.writeFileSync(path.join(dir, 'Makefile'), 'A=1\n# <<<<<<<no space\n');
+  assert.deepStrictEqual(await readProjectInfo(dir, { exec: async () => ({ stdout: '{"a":1}' }) }), { a: 1 });
+});
+
+test('missing_makefile_falls_through_to_make', async () => {
+  await assert.rejects(
+    readProjectInfo(tmp(), { exec: rejecting('make: *** No targets specified and no makefile found.  Stop.') }),
+    (error) => error instanceof ToolchainError && /No Makefile/.test(error.message),
   );
 });
 
@@ -140,10 +173,34 @@ test('version_notice', () => {
   const dir = tmp();
   fs.mkdirSync(path.join(dir, '.make', 'vscode'), { recursive: true });
   fs.writeFileSync(path.join(dir, '.make', 'vscode', 'package.json'), JSON.stringify({ version: '0.2.0' }));
-  assert.match(versionNotice('0.1.0', dir), /newer.*0\.2\.0.*0\.1\.0.*make vscode/);
+  assert.match(versionNotice('0.1.0', dir), /newer.*0\.2\.0.*0\.1\.0.*Update the extension.*make vscode/);
   assert.strictEqual(versionNotice('0.2.0', dir), null);
   assert.strictEqual(versionNotice('0.10.0', dir), null);
   assert.strictEqual(versionNotice('0.1.0', tmp()), null); // no extension sources in the project
+});
+
+test('upgrade_offer_four_cases', () => {
+  const project = (makefileSdcc, version) => {
+    const dir = tmp();
+    fs.mkdirSync(path.join(dir, '.make', 'vscode'), { recursive: true });
+    if (makefileSdcc) fs.writeFileSync(path.join(dir, '.make', 'Makefile-sdcc'), '');
+    if (version) fs.writeFileSync(path.join(dir, '.make', 'vscode', 'package.json'), JSON.stringify({ version }));
+    return dir;
+  };
+  assert.strictEqual(upgradeOffer('0.2.0', project(false, '0.1.0')), false); // not a toolchain project
+  assert.strictEqual(upgradeOffer('0.2.0', project(true, null)), true); // no extension sources yet
+  assert.strictEqual(upgradeOffer('0.2.0', project(true, '0.1.0')), true); // older
+  assert.strictEqual(upgradeOffer('0.2.0', project(true, '0.2.0')), false); // same
+  assert.strictEqual(upgradeOffer('0.2.0', project(true, '0.10.0')), false); // numeric, not textual
+  assert.strictEqual(upgradeOffer('0.2.0', tmp()), false); // no .make at all
+});
+
+test('upgrade_offer_unparseable_package_json', () => {
+  const dir = tmp();
+  fs.mkdirSync(path.join(dir, '.make', 'vscode'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.make', 'Makefile-sdcc'), '');
+  fs.writeFileSync(path.join(dir, '.make', 'vscode', 'package.json'), '{broken');
+  assert.strictEqual(upgradeOffer('0.2.0', dir), true);
 });
 
 // --- Task 10: offline SFR model -----------------------------------------------------------

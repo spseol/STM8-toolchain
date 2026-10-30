@@ -14,6 +14,7 @@
   "main": "./extension.js",
   "activationEvents": [
     "workspaceContains:.make/gdbinit",
+    "workspaceContains:.make/Makefile-sdcc",
     "onDebugResolve:stm8"
   ],
   "extensionKind": [
@@ -60,6 +61,16 @@
         ]
       }
     ],
+    "configuration": {
+      "title": "STM8",
+      "properties": {
+        "stm8.toolchainUrl": {
+          "type": "string",
+          "default": "https://gitlab.com/spseol/mit-no/STM8S-toolchain.git",
+          "description": "Git repository that STM8: Update Toolchain downloads the current toolchain (.make/) from."
+        }
+      }
+    },
     "views": {
       "debug": [
         {
@@ -105,6 +116,10 @@
       {
         "command": "stm8.pickChip",
         "title": "STM8: Choose Chip…"
+      },
+      {
+        "command": "stm8.updateToolchain",
+        "title": "STM8: Update Toolchain"
       }
     ],
     "menus": {

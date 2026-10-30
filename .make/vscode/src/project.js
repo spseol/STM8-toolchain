@@ -9,10 +9,25 @@ const { parse } = require('./sfrmodel');
 const run = promisify(execFile);
 
 /** A problem the student can fix; its message is shown as it is. */
-class ToolchainError extends Error {}
+class ToolchainError extends Error {
+  /** `fix`: name of the command that repairs the problem (the error dialog offers it as a button). */
+  constructor(message, { fix } = {}) {
+    super(message);
+    if (fix) this.fix = fix;
+  }
+}
 
 /** Paths and the OpenOCD command of the project in CWD (`make dap-info`). */
 async function readProjectInfo(cwd, { exec = run } = {}) {
+  let makefile = '';
+  try {
+    makefile = fs.readFileSync(path.join(cwd, 'Makefile'), 'utf8');
+  } catch {
+    // no Makefile: make says so below
+  }
+  if (/^<{7} /m.test(makefile)) {
+    throw new ToolchainError('Makefile has unresolved conflicts from Update Toolchain – resolve them (Accept Current/Incoming) and save');
+  }
   let stdout;
   try {
     ({ stdout } = await exec('make', ['-s', '--no-print-directory', 'dap-info'], {
@@ -22,7 +37,10 @@ async function readProjectInfo(cwd, { exec = run } = {}) {
   } catch (error) {
     const text = `${error.stderr || ''}${error.message || ''}`;
     if (/No rule to make target/.test(text)) {
-      throw new ToolchainError('Old toolchain – update .make/ and add the line -include .make/vscode.mk to Makefile');
+      throw new ToolchainError(
+        'Old toolchain – run STM8: Update Toolchain (or update .make/ by hand and add the line -include .make/vscode.mk to Makefile)',
+        { fix: 'updateToolchain' },
+      );
     }
     if (/no makefile found/i.test(text)) {
       throw new ToolchainError(`No Makefile in ${cwd} – open the STM8 project folder`);
@@ -73,25 +91,40 @@ async function preflight(info, cwd, { exec = run } = {}) {
   return problems;
 }
 
-/** Text for the student when the project carries a newer extension than the installed one, else null. */
-function versionNotice(installed, projectDir) {
-  let available;
+/** Version of the extension sources in the project (`.make/vscode/package.json`), or null when missing or broken. */
+function projectExtensionVersion(projectDir) {
   try {
-    available = JSON.parse(fs.readFileSync(path.join(projectDir, '.make', 'vscode', 'package.json'), 'utf8')).version;
+    const { version } = JSON.parse(fs.readFileSync(path.join(projectDir, '.make', 'vscode', 'package.json'), 'utf8'));
+    return typeof version === 'string' ? version : null;
   } catch {
     return null;
   }
+}
+
+/** Numeric comparison of dotted versions: > 0 when A is newer than B, < 0 when older, 0 when equal. */
+function compareVersions(a, b) {
   const parts = (version) => version.split('.').map(Number);
-  const [a, b] = [parts(available), parts(installed)];
+  const [x, y] = [parts(a), parts(b)];
   for (let i = 0; i < 3; i++) {
-    if (a[i] !== b[i]) {
-      return a[i] > b[i]
-        ? `This project has a newer STM8 extension (${available}) than the installed one (${installed}). `
-          + 'Run "make vscode" and restart the editor.'
-        : null;
-    }
+    if (x[i] !== y[i]) return x[i] - y[i];
   }
-  return null;
+  return 0;
+}
+
+/** Text for the student when the project carries a newer extension than the installed one, else null. */
+function versionNotice(installed, projectDir) {
+  const available = projectExtensionVersion(projectDir);
+  if (available === null || compareVersions(available, installed) <= 0) return null;
+  return `This project has a newer STM8 extension (${available}) than the installed one (${installed}). `
+    + 'Update the extension (Extensions view) or run "make vscode", then restart the editor.';
+}
+
+/** Is this a toolchain project whose .make/ is older than the installed extension (Update Toolchain helps)? */
+function upgradeOffer(installed, projectDir) {
+  if (!projectDir) return false;
+  if (!fs.existsSync(path.join(projectDir, '.make', 'Makefile-sdcc'))) return false;
+  const available = projectExtensionVersion(projectDir);
+  return available === null || compareVersions(available, installed) < 0;
 }
 
 /** Peripherals, registers and bits of the chip, read offline (no chip, no session needed). */
@@ -160,5 +193,5 @@ function spawnGdb(info, cwd) {
 }
 
 module.exports = {
-  ToolchainError, readProjectInfo, preflight, versionNotice, loadSfrModel, listChips, switchChip, openocdTail, otherOpenocd, spawnGdb,
+  ToolchainError, readProjectInfo, preflight, versionNotice, upgradeOffer, loadSfrModel, listChips, switchChip, openocdTail, otherOpenocd, spawnGdb,
 };

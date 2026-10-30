@@ -58,6 +58,7 @@ def test_package_json_contributes_stm8_debugger():
     assert [d["type"] for d in package["contributes"]["debuggers"]] == ["stm8"]
     assert "workspaceContains:.make/gdbinit" in package["activationEvents"]
     assert "onDebugResolve:stm8" in package["activationEvents"]
+    assert "workspaceContains:.make/Makefile-sdcc" in package["activationEvents"]  # offer to update old projects
     assert package["engines"]["vscode"].startswith("^1.")
     assert not package.get("dependencies")  # no npm install for students
 
@@ -162,6 +163,18 @@ def test_package_json_matches_extension_code():
     assert {m["command"] for m in package["contributes"]["menus"]["commandPalette"]} == {c for c in declared if c.startswith("stm8.sfr.")}
     views = [v["id"] for v in package["contributes"]["views"]["debug"]]
     assert views == re.findall(r"createTreeView\('([^']+)'", code) == ["stm8Peripherals"]
+
+
+def test_package_json_declares_update_toolchain():
+    package = json.loads((VSCODE / "package.json").read_text())
+    commands = {c["command"]: c for c in package["contributes"]["commands"]}
+    assert commands["stm8.updateToolchain"]["title"] == "STM8: Update Toolchain"
+    hidden = {m["command"] for m in package["contributes"]["menus"]["commandPalette"]}
+    assert "stm8.updateToolchain" not in hidden  # must be visible in the palette
+    setting = package["contributes"]["configuration"]["properties"]["stm8.toolchainUrl"]
+    assert setting["type"] == "string"
+    assert setting["default"] == "https://gitlab.com/spseol/mit-no/STM8S-toolchain.git"
+    assert setting["description"]
 
 
 def test_fallback_side_effects_match_python():

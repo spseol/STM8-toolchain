@@ -6,7 +6,7 @@ const { PassThrough } = require('node:stream');
 
 // extension.js needs the `vscode` module, which only exists inside the editor: a small fake.
 function load() {
-  const seen = { providers: {}, factories: {}, trackers: {}, commands: {}, views: {}, panels: [], messages: [] };
+  const seen = { providers: {}, factories: {}, trackers: {}, commands: {}, views: {}, panels: [], messages: [], executed: [], opened: [], shown: [] };
   class EventEmitter {
     constructor() {
       this.listeners = [];
@@ -25,7 +25,7 @@ function load() {
     },
     commands: {
       registerCommand: (id, handler) => { seen.commands[id] = handler; return { dispose() {} }; },
-      executeCommand: async () => {},
+      executeCommand: async (...args) => { seen.executed.push(args); },
     },
     StatusBarAlignment: { Left: 1 },
     tasks: { onDidEndTaskProcess: (listener) => { seen.taskEnded = listener; return { dispose() {} }; } },
@@ -50,7 +50,9 @@ function load() {
       createStatusBarItem: () => ({ show() {}, dispose() {} }),
       createTerminal: () => ({ show() {}, sendText() {}, dispose() {} }),
       showQuickPick: async () => undefined,
-      showWarningMessage: async () => {},
+      showWarningMessage: async (...args) => { seen.messages.push(['warning', ...args]); return seen.warningChoice; },
+      showTextDocument: async (doc) => { seen.shown.push(doc); },
+      withProgress: async (options, task) => { seen.progress = options; return task(); },
       showInputBox: async () => seen.inputText,
       createWebviewPanel: (id, title, column, options) => {
         const panel = {
@@ -63,10 +65,15 @@ function load() {
         return panel;
       },
       showErrorMessage: async (...args) => { seen.messages.push(['error', ...args]); },
-      showInformationMessage: async (...args) => { seen.messages.push(['info', ...args]); },
+      showInformationMessage: async (...args) => { seen.messages.push(['info', ...args]); return seen.infoChoice; },
       createOutputChannel: () => ({ append() {}, dispose() {} }),
     },
-    workspace: { workspaceFolders: [{ uri: { fsPath: '/proj' } }] },
+    ProgressLocation: { Notification: 15 },
+    workspace: {
+      workspaceFolders: [{ uri: { fsPath: '/proj' } }],
+      getConfiguration: (section) => ({ get: (key) => (section === 'stm8' && key === 'toolchainUrl' ? 'https://example.org/t.git' : undefined) }),
+      openTextDocument: async (file) => { seen.opened.push(file); return { file }; },
+    },
     EventEmitter,
     DebugAdapterInlineImplementation: class { constructor(adapter) { this.adapter = adapter; } },
   };
@@ -75,14 +82,20 @@ function load() {
     return request === 'vscode' ? vscode : originalLoad.call(this, request, ...rest);
   };
   try {
-    delete require.cache[require.resolve('../extension')];
-    return { extension: require('../extension'), project: require('../src/project'), seen, vscode };
+    for (const name of ['../extension', '../src/project', '../src/upgrade']) delete require.cache[require.resolve(name)]; // fresh, so replaced functions do not leak between tests
+    return {
+      extension: require('../extension'), project: require('../src/project'), upgrade: require('../src/upgrade'), seen, vscode,
+    };
   } finally {
     Module._load = originalLoad;
   }
 }
 
-const context = () => ({ subscriptions: [], extension: { packageJSON: { version: '0.1.0' } } });
+const context = (stored = {}) => ({
+  subscriptions: [],
+  extension: { packageJSON: { version: '0.1.0' } },
+  workspaceState: { get: (key) => stored[key], update: async (key, value) => { stored[key] = value; } },
+});
 const folder = { uri: { fsPath: '/proj' } };
 const config = { type: 'stm8', request: 'launch', name: 'STM8 debug' };
 
@@ -126,6 +139,33 @@ test('toolchain_error_aborts_launch_with_its_message', async () => {
   const result = await seen.providers.stm8.resolveDebugConfigurationWithSubstitutedVariables(folder, { ...config });
   assert.strictEqual(result, undefined);
   assert.match(seen.messages.find(([k]) => k === 'error')[1], /Old toolchain/);
+});
+
+test('old_toolchain_error_offers_update_toolchain', async () => {
+  const { extension, project, seen, vscode } = load();
+  project.versionNotice = () => null;
+  project.readProjectInfo = async () => {
+    throw new project.ToolchainError('Old toolchain – run STM8: Update Toolchain', { fix: 'updateToolchain' });
+  };
+  vscode.window.showErrorMessage = async (...args) => { seen.messages.push(['error', ...args]); return 'Update Toolchain'; };
+  extension.activate(context());
+  const result = await seen.providers.stm8.resolveDebugConfigurationWithSubstitutedVariables(folder, { ...config });
+  assert.strictEqual(result, undefined);
+  const [, text, options, button] = seen.messages.find(([k]) => k === 'error');
+  assert.match(text, /Old toolchain/);
+  assert.deepStrictEqual(options, { modal: true });
+  assert.strictEqual(button, 'Update Toolchain');
+  assert.deepStrictEqual(seen.executed, [['stm8.updateToolchain']]);
+});
+
+test('other_toolchain_errors_have_no_update_button', async () => {
+  const { extension, project, seen, vscode } = load();
+  project.versionNotice = () => null;
+  project.readProjectInfo = async () => { throw new project.ToolchainError('No Makefile in /proj'); };
+  vscode.window.showErrorMessage = async (...args) => { seen.messages.push(['error', ...args]); };
+  extension.activate(context());
+  await seen.providers.stm8.resolveDebugConfigurationWithSubstitutedVariables(folder, { ...config });
+  assert.strictEqual(seen.messages.find(([k]) => k === 'error').length, 3); // text and options, no button
 });
 
 test('no_problems_passes_configuration', async () => {
@@ -396,4 +436,158 @@ test('other_tasks_do_not_block_the_launch', async () => {
   const withTask = { ...config, preLaunchTask: 'stm8: build' };
   assert.deepStrictEqual(
     await seen.providers.stm8.resolveDebugConfigurationWithSubstitutedVariables(folder, { ...withTask }), withTask);
+});
+
+// --- Update Toolchain ---------------------------------------------------------------------
+
+/** Extension activated with runUpgrade replaced by a script of results; `calls` records its arguments. */
+function upgrading(...results) {
+  const loaded = load();
+  const { extension, project, upgrade } = loaded;
+  project.versionNotice = () => null;
+  const calls = [];
+  upgrade.runUpgrade = async (root, options) => {
+    calls.push([root, options]);
+    return results.shift();
+  };
+  extension.activate(context());
+  return { ...loaded, calls };
+}
+const messagesOf = (seen, kind) => seen.messages.filter(([k]) => k === kind);
+
+test('update_toolchain_command_is_registered', () => {
+  const { seen } = upgrading();
+  assert.strictEqual(typeof seen.commands['stm8.updateToolchain'], 'function');
+});
+
+test('update_success_shows_the_summary_and_that_nothing_was_committed', async () => {
+  const { seen, calls } = upgrading({ code: 0, output: 'Updated .make/: 3 files replaced, 0 removed.\nMakefile: merged.' });
+  await seen.commands['stm8.updateToolchain']();
+  assert.deepStrictEqual(calls, [['/proj', { url: 'https://example.org/t.git', switchChoice: undefined }]]);
+  assert.ok(seen.progress, 'runs under a progress notification');
+  const [, text] = messagesOf(seen, 'info')[0];
+  assert.match(text, /3 files replaced/);
+  assert.match(text, /Makefile: merged/);
+  assert.match(text, /Nothing was committed/);
+});
+
+test('update_refused_shows_the_error', async () => {
+  const { seen } = upgrading({ code: 1, output: 'The project has uncommitted changes.' });
+  await seen.commands['stm8.updateToolchain']();
+  assert.match(messagesOf(seen, 'error')[0][1], /uncommitted changes/);
+  assert.strictEqual(messagesOf(seen, 'info').length, 0);
+});
+
+test('update_with_conflicts_opens_the_makefile_and_explains', async () => {
+  const { seen } = upgrading({ code: 2, output: 'Makefile: conflict.' });
+  await seen.commands['stm8.updateToolchain']();
+  assert.deepStrictEqual(seen.opened, ['/proj/Makefile']);
+  assert.strictEqual(seen.shown.length, 1);
+  const [, text] = messagesOf(seen, 'warning')[0];
+  assert.match(text, /<<<<<<</);
+  assert.match(text, /cannot build|cannot be built|impossible|will not build/i);
+});
+
+test('variant_switch_asks_and_reruns_with_yes', async () => {
+  const { seen, calls } = upgrading({ code: 3, output: '', needsSwitch: 'sdcc-gas' }, { code: 0, output: 'Makefile: switched.' });
+  seen.warningChoice = 'Switch to Makefile-sdcc';
+  await seen.commands['stm8.updateToolchain']();
+  const [, text, options, button] = messagesOf(seen, 'warning')[0];
+  assert.match(text, /sdcc-gas/);
+  assert.match(text, /DEVICE_FLASH/);
+  assert.match(text, /F_CPU/);
+  assert.match(text, /git checkout Makefile/);
+  assert.deepStrictEqual(options, { modal: true });
+  assert.strictEqual(button, 'Switch to Makefile-sdcc');
+  assert.deepStrictEqual(calls.map(([, o]) => o.switchChoice), [undefined, 'yes']);
+  assert.match(messagesOf(seen, 'info')[0][1], /switched/);
+});
+
+test('variant_switch_cancelled_does_not_rerun', async () => {
+  const { seen, calls } = upgrading({ code: 3, output: '', needsSwitch: 'sdcc-gas' });
+  seen.warningChoice = undefined; // dialog dismissed
+  await seen.commands['stm8.updateToolchain']();
+  assert.strictEqual(calls.length, 1);
+  assert.strictEqual(messagesOf(seen, 'info').length, 0);
+  assert.strictEqual(messagesOf(seen, 'error').length, 0);
+});
+
+test('second_switch_question_is_reported_not_looped', async () => {
+  const { seen, calls } = upgrading({ code: 3, output: '', needsSwitch: 'sdcc-gas' }, { code: 3, output: '', needsSwitch: 'sdcc-gas' });
+  seen.warningChoice = 'Switch to Makefile-sdcc';
+  await seen.commands['stm8.updateToolchain']();
+  assert.strictEqual(calls.length, 2);
+  assert.strictEqual(messagesOf(seen, 'error').length, 1);
+});
+
+test('update_is_refused_while_debugging', async () => {
+  const { seen, vscode, calls } = upgrading({ code: 0, output: 'x' });
+  vscode.debug.activeDebugSession = { type: 'stm8' };
+  await seen.commands['stm8.updateToolchain']();
+  assert.strictEqual(calls.length, 0);
+  assert.match(messagesOf(seen, 'warning')[0][1], /Stop debugging before updating the toolchain/);
+});
+
+test('unexpected_failure_of_update_is_shown', async () => {
+  const loaded = load();
+  loaded.project.versionNotice = () => null;
+  loaded.upgrade.runUpgrade = async () => { throw new Error('boom'); };
+  loaded.extension.activate(context());
+  await loaded.seen.commands['stm8.updateToolchain']();
+  assert.match(messagesOf(loaded.seen, 'error')[0][1], /boom/);
+});
+
+// --- offer on activation ---
+
+const OFFER = 'This project has an older STM8 toolchain than the extension. Update it?';
+function offering({ stored = {}, choice } = {}) {
+  const loaded = load();
+  loaded.project.versionNotice = () => null;
+  loaded.project.upgradeOffer = () => true;
+  loaded.seen.infoChoice = choice;
+  const ctx = context(stored);
+  loaded.extension.activate(ctx);
+  return { ...loaded, stored };
+}
+
+test('old_project_gets_an_offer_to_update', async () => {
+  const { seen } = offering();
+  await flush();
+  const [, text, ...buttons] = messagesOf(seen, 'info').find(([, t]) => t === OFFER);
+  assert.strictEqual(text, OFFER);
+  assert.deepStrictEqual(buttons, ['Update Toolchain', 'Not now', "Don't ask again"]);
+});
+
+test('no_offer_for_a_current_project', async () => {
+  const loaded = load();
+  loaded.project.versionNotice = () => null;
+  loaded.project.upgradeOffer = () => false;
+  loaded.extension.activate(context());
+  await flush();
+  assert.ok(!messagesOf(loaded.seen, 'info').some(([, t]) => t === OFFER));
+});
+
+test('no_offer_after_dont_ask_again', async () => {
+  const { seen } = offering({ stored: { 'stm8.upgrade.dismissed': true } });
+  await flush();
+  assert.ok(!messagesOf(seen, 'info').some(([, t]) => t === OFFER));
+});
+
+test('offer_update_toolchain_runs_the_command', async () => {
+  const { seen } = offering({ choice: 'Update Toolchain' });
+  await flush();
+  assert.deepStrictEqual(seen.executed, [['stm8.updateToolchain']]);
+});
+
+test('offer_not_now_stores_nothing', async () => {
+  const { seen, stored } = offering({ choice: 'Not now' });
+  await flush();
+  assert.deepStrictEqual(stored, {});
+  assert.deepStrictEqual(seen.executed, []);
+});
+
+test('offer_dont_ask_again_is_remembered', async () => {
+  const { stored } = offering({ choice: "Don't ask again" });
+  await flush();
+  assert.strictEqual(stored['stm8.upgrade.dismissed'], true);
 });

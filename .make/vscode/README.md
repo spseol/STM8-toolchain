@@ -48,7 +48,7 @@ session, otherwise `make flash` in the same terminal), *Debug* and the target ch
 
 | message | what to do |
 |:--- |:- |
-| `Old toolchain – update .make/ …` | the project has no `.make/vscode.mk`: copy `.make/` from a current toolchain and add `-include .make/vscode.mk` as the last line of `Makefile` |
+| `Old toolchain – run STM8: Update Toolchain …` | the project has no `.make/vscode.mk`: run *STM8: Update Toolchain* (or copy `.make/` from a current toolchain by hand and add `-include .make/vscode.mk` as the last line of `Makefile`) |
 | `stm8-gdb 15 or newer is required` / `not found in PATH` | install the STM8 binutils-gdb build with Python and DAP support |
 | `No ST-Link found on USB` | connect the board; on Linux check the udev rules |
 | `make debug is running (PID …)` | close the cgdb session, one debugger at a time |

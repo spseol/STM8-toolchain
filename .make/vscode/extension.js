@@ -1,5 +1,6 @@
 'use strict';
 const crypto = require('node:crypto');
+const path = require('node:path');
 const vscode = require('vscode');
 const { GdbProxy } = require('./src/adapter');
 const { DEFAULT_SIDE_EFFECTS } = require('./src/guard');
@@ -7,9 +8,13 @@ const { SfrTree } = require('./src/sfrtree');
 const { renderRegisterHtml } = require('./src/regview');
 const { registerStatusBar } = require('./src/statusbar');
 const project = require('./src/project'); // called through the object, so the tests can replace functions
+const upgrade = require('./src/upgrade');
 
 const TYPE = 'stm8';
 const RESUMING = new Set(['continue', 'next', 'stepIn', 'stepOut', 'stepBack', 'reverseContinue']);
+const UPDATE = 'Update Toolchain';
+const SWITCH = 'Switch to Makefile-sdcc';
+const DISMISSED = 'stm8.upgrade.dismissed'; // workspaceState: the student chose "Don't ask again"
 const DEFAULT_CONFIG = { type: TYPE, request: 'launch', name: 'STM8 debug', preLaunchTask: 'stm8: build' };
 
 const rootOf = (folder) => (folder || (vscode.workspace.workspaceFolders || [])[0] || {}).uri?.fsPath;
@@ -108,7 +113,9 @@ function activate(context) {
         if (problems.length === 0) return config;
         await vscode.window.showErrorMessage(`STM8 debug cannot start:\n- ${problems.join('\n- ')}`, { modal: true });
       } catch (error) {
-        await vscode.window.showErrorMessage(error.message, { modal: true });
+        const fix = error.fix === 'updateToolchain' ? [UPDATE] : [];
+        const choice = await vscode.window.showErrorMessage(error.message, { modal: true }, ...fix);
+        if (choice === UPDATE) vscode.commands.executeCommand('stm8.updateToolchain'); // not awaited: the launch is cancelled meanwhile
       }
       return undefined; // cancels the launch
     },
@@ -146,6 +153,52 @@ function activate(context) {
     },
   };
 
+  // --- Update Toolchain -----------------------------------------------------------------------
+  const switchQuestion = (variant) => `This project uses the older toolchain variant ${variant}.\n\n`
+    + 'The update replaces its Makefile with the toolchain\'s Makefile-sdcc. Only the chip (DEVICE_FLASH) is carried over; '
+    + 'other edits in the Makefile (for example F_CPU or paths) are NOT. '
+    + 'The old Makefile stays recoverable with `git checkout Makefile`.';
+  const withProgress = (title, task) => (vscode.window.withProgress
+    ? vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title }, task)
+    : task());
+
+  async function showUpgradeResult(root, result) {
+    if (result.code === 0) {
+      const summary = result.output.split('\n').filter((line) => !line.startsWith('Nothing was committed')).join('\n');
+      await vscode.window.showInformationMessage(
+        `Toolchain updated.\n${summary}\nNothing was committed – review the changes (git diff) and commit them when you are happy.`,
+      );
+    } else if (result.code === 2) {
+      const document = await vscode.workspace.openTextDocument(path.join(root, 'Makefile'));
+      await vscode.window.showTextDocument(document);
+      await vscode.window.showWarningMessage(
+        'The toolchain was updated, but your Makefile and the new one disagree. The Makefile now contains conflict markers '
+        + '(<<<<<<<, =======, >>>>>>>). Choose Accept Current/Incoming for each one and save; the project will not build until the markers are gone.',
+      );
+    } else {
+      await vscode.window.showErrorMessage(result.output || `Update Toolchain failed (code ${result.code}).`);
+    }
+  }
+
+  async function updateToolchain() {
+    const session = vscode.debug.activeDebugSession;
+    if (session && session.type === TYPE) {
+      await vscode.window.showWarningMessage('Stop debugging before updating the toolchain.');
+      return;
+    }
+    const root = rootOf();
+    const url = vscode.workspace.getConfiguration('stm8').get('toolchainUrl');
+    const go = (switchChoice) => withProgress('Updating the STM8 toolchain…', () => upgrade.runUpgrade(root, { url, switchChoice }));
+    let result = await go();
+    if (result.code === 3) {
+      const choice = await vscode.window.showWarningMessage(switchQuestion(result.needsSwitch), { modal: true }, SWITCH);
+      if (choice !== SWITCH) return;
+      result = await go('yes');
+      if (result.code === 3) result = { code: 1, output: 'The update still asks to switch the Makefile; nothing was changed.' };
+    }
+    await showUpgradeResult(root, result);
+  }
+
   const tracker = {
     createDebugAdapterTracker() {
       return {
@@ -181,6 +234,7 @@ function activate(context) {
     }),
     vscode.commands.registerCommand('stm8.sfr.readRegister', (node) => guarded(() => tree.readRegister(node))),
     vscode.commands.registerCommand('stm8.sfr.openRegister', openRegister),
+    vscode.commands.registerCommand('stm8.updateToolchain', () => guarded(updateToolchain)),
   );
 
   context.subscriptions.push(registerStatusBar(vscode, project, {
@@ -188,8 +242,19 @@ function activate(context) {
     onChipChanged: () => tree.setModel(null),
   }));
 
-  const notice = project.versionNotice(context.extension.packageJSON.version, rootOf());
+  const version = context.extension.packageJSON.version;
+  const notice = project.versionNotice(version, rootOf());
   if (notice) vscode.window.showInformationMessage(notice);
+
+  if (project.upgradeOffer(version, rootOf()) && !context.workspaceState.get(DISMISSED)) {
+    guarded(async () => {
+      const choice = await vscode.window.showInformationMessage(
+        'This project has an older STM8 toolchain than the extension. Update it?', UPDATE, 'Not now', "Don't ask again",
+      );
+      if (choice === UPDATE) await vscode.commands.executeCommand('stm8.updateToolchain');
+      else if (choice === "Don't ask again") await context.workspaceState.update(DISMISSED, true);
+    });
+  }
 }
 
 function deactivate() {}
