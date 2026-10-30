@@ -31,7 +31,7 @@ function registerStatusBar(vscode, project, { rootOf, onChipChanged }) {
     return bar;
   };
   const bars = [
-    item(100, 'stm8.build', '$(tools) Build', 'Build the project (make debug-files)'),
+    item(100, 'stm8.build', '$(tools) Build', 'Build the project (make)'),
     item(99, 'stm8.flash', '$(zap) Flash', 'Build and load the program into the chip'),
     item(98, 'stm8.debug', '$(debug-alt) Debug', 'Build, load and debug (F5)'),
     item(97, 'stm8.pickChip', '$(chip) STM8', 'Choose the target chip'),
@@ -47,6 +47,15 @@ function registerStatusBar(vscode, project, { rootOf, onChipChanged }) {
   }
 
   let terminal;
+  function runInTerminal(command) {
+    // the user may have closed it (trash icon) or the shell may have exited
+    if (!terminal || terminal.exitStatus !== undefined) {
+      terminal = vscode.window.createTerminal({ name: 'STM8', cwd: rootOf() });
+    }
+    terminal.show();
+    terminal.sendText(command);
+  }
+
   async function pickChip() {
     if (debugging()) {
       await vscode.window.showWarningMessage('Stop debugging before changing the chip.');
@@ -69,16 +78,11 @@ function registerStatusBar(vscode, project, { rootOf, onChipChanged }) {
   }
 
   const commands = [
-    vscode.commands.registerCommand('stm8.build', () => vscode.commands.executeCommand('workbench.action.tasks.runTask', 'stm8: build')),
+    vscode.commands.registerCommand('stm8.build', () => runInTerminal('make')),
     vscode.commands.registerCommand('stm8.debug', () => vscode.commands.executeCommand('workbench.action.debug.start')),
     vscode.commands.registerCommand('stm8.flash', () => {
       if (debugging()) return vscode.commands.executeCommand('workbench.action.debug.restart'); // the debugger loads the chip
-      // the user may have closed it (trash icon) or the shell may have exited
-      if (!terminal || terminal.exitStatus !== undefined) {
-        terminal = vscode.window.createTerminal({ name: 'STM8 flash', cwd: rootOf() });
-      }
-      terminal.show();
-      terminal.sendText('make flash');
+      runInTerminal('make flash');
       return undefined;
     }),
     vscode.commands.registerCommand('stm8.pickChip', pickChip),

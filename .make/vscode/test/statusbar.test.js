@@ -64,10 +64,14 @@ test('old_toolchain_shows_a_question_mark', async () => {
   assert.match(seen.items[3].text, /STM8 \?/);
 });
 
-test('build_runs_the_build_task', async () => {
+test('build_runs_make_in_the_terminal_shared_with_flash', async () => {
   const { seen } = setup();
   await seen.commands['stm8.build']();
-  assert.deepStrictEqual(seen.executed, [['workbench.action.tasks.runTask', 'stm8: build']]);
+  await seen.commands['stm8.flash']();
+  assert.strictEqual(seen.terminals.length, 1);
+  assert.strictEqual(seen.terminals[0].options.cwd, '/proj');
+  assert.deepStrictEqual(seen.terminals[0].sent, ['make', 'make flash']);
+  assert.deepStrictEqual(seen.executed, []);
 });
 
 test('debug_starts_debugging', async () => {

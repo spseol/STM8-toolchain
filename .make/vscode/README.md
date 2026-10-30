@@ -41,8 +41,8 @@ Writing to a status register with write-0-to-clear flags (e.g. `TIM4.SR1`) can c
 than the one you meant: the bits are written back as a whole byte.
 
 The Debug Console accepts gdb commands, including `sfr`, `sfr TIM4.CR1`, `p TIM4->CR1`,
-`set var GPIOD->ODR |= 0x10`. The status bar has *Build*, *Flash* (while debugging it restarts the
-session, otherwise `make flash`), *Debug* and the target chip (click to switch, only while not debugging).
+`set var GPIOD->ODR |= 0x10`. The status bar has *Build* (`make` in a terminal), *Flash* (while debugging it restarts the
+session, otherwise `make flash` in the same terminal), *Debug* and the target chip (click to switch, only while not debugging).
 
 ## When something goes wrong
 
