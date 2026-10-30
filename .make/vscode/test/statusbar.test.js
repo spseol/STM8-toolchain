@@ -86,6 +86,16 @@ test('flash_without_session_runs_make_flash_in_one_reused_terminal', async () =>
   assert.deepStrictEqual(seen.executed, []);
 });
 
+test('flash_recreates_the_terminal_after_it_was_closed', async () => {
+  const { seen } = setup();
+  await seen.commands['stm8.flash']();
+  seen.terminals[0].exitStatus = { code: undefined }; // closed with the trash icon
+  await seen.commands['stm8.flash']();
+  assert.strictEqual(seen.terminals.length, 2);
+  assert.deepStrictEqual(seen.terminals[0].sent, ['make flash']);
+  assert.deepStrictEqual(seen.terminals[1].sent, ['make flash']);
+});
+
 test('flash_during_debugging_restarts_the_session', async () => {
   const { seen } = setup({ session: { type: 'stm8' } });
   await seen.commands['stm8.flash']();

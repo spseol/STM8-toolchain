@@ -73,7 +73,10 @@ function registerStatusBar(vscode, project, { rootOf, onChipChanged }) {
     vscode.commands.registerCommand('stm8.debug', () => vscode.commands.executeCommand('workbench.action.debug.start')),
     vscode.commands.registerCommand('stm8.flash', () => {
       if (debugging()) return vscode.commands.executeCommand('workbench.action.debug.restart'); // the debugger loads the chip
-      terminal = terminal || vscode.window.createTerminal({ name: 'STM8 flash', cwd: rootOf() });
+      // the user may have closed it (trash icon) or the shell may have exited
+      if (!terminal || terminal.exitStatus !== undefined) {
+        terminal = vscode.window.createTerminal({ name: 'STM8 flash', cwd: rootOf() });
+      }
       terminal.show();
       terminal.sendText('make flash');
       return undefined;
