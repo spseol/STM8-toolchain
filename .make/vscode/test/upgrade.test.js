@@ -24,10 +24,11 @@ const REPORT = JSON.stringify({ replaced: 3, removed: 1, makefile: 'merged', lau
 test('pipeline_fetch_show_python_in_order', async () => {
   const { exec, calls } = fakeExec({ python: () => ({ stdout: `Updated .make/\n${REPORT}\n` }) });
   const result = await runUpgrade('/p', { url: URL, exec });
-  assert.deepStrictEqual(calls.map((c) => [c.cmd, ...c.args.slice(0, 1)]), [['git', 'fetch'], ['git', 'show'], ['python3', '-c']]);
+  assert.deepStrictEqual(calls.map((c) => [c.cmd, ...c.args.slice(0, 1)]), [['git', 'fetch'], ['git', 'show'], ['python3', '-I']]);
   assert.deepStrictEqual(calls[0].args, ['fetch', '--', URL, 'main']);
   assert.deepStrictEqual(calls[1].args, ['show', 'FETCH_HEAD:.make/upgrade.py']);
-  assert.deepStrictEqual(calls[2].args, ['-c', 'SOURCE-OF-UPGRADE', 'FETCH_HEAD', '--json']);
+  // -I: a difflib.py or json.py in the project folder must not replace the standard library
+  assert.deepStrictEqual(calls[2].args, ['-I', '-c', 'SOURCE-OF-UPGRADE', 'FETCH_HEAD', '--json']);
   for (const call of calls) {
     assert.strictEqual(call.options.cwd, '/p');
     assert.ok(call.options.maxBuffer >= 16 * 1024 * 1024);
@@ -44,7 +45,19 @@ test('code_0_output_is_the_summary_without_the_json_line', async () => {
 test('code_2_is_returned_with_the_summary', async () => {
   const conflict = JSON.stringify({ makefile: 'conflict' });
   const { exec } = fakeExec({ python: () => { throw failure(2, `Makefile: conflict.\n${conflict}\n`); } });
-  assert.deepStrictEqual(await runUpgrade('/p', { url: URL, exec }), { code: 2, output: 'Makefile: conflict.' });
+  assert.deepStrictEqual(await runUpgrade('/p', { url: URL, exec }), { code: 2, output: 'Makefile: conflict.', conflict: true });
+});
+
+test('code_2_without_a_conflict_report_is_a_failure', async () => {
+  // exit code 2 is also what Python and argparse use for usage errors
+  const usage = 'usage: upgrade.py [-h] ref\nupgrade.py: error: unrecognized arguments: --new-flag';
+  const { exec } = fakeExec({ python: () => { throw failure(2, '', `${usage}\n`); } });
+  assert.deepStrictEqual(await runUpgrade('/p', { url: URL, exec }), { code: 1, output: usage });
+  const merged = JSON.stringify({ makefile: 'merged' });
+  const { exec: other } = fakeExec({ python: () => { throw failure(2, `Makefile: merged.\n${merged}\n`, ''); } });
+  const result = await runUpgrade('/p', { url: URL, exec: other });
+  assert.strictEqual(result.code, 1);
+  assert.match(result.output, /Makefile: merged/);
 });
 
 test('code_1_output_is_the_trimmed_stderr', async () => {
@@ -60,7 +73,7 @@ test('code_3_parses_needs_switch', async () => {
 test('switch_choice_is_passed_on', async () => {
   const { exec, calls } = fakeExec({ python: () => ({ stdout: `ok\n${REPORT}\n` }) });
   await runUpgrade('/p', { url: URL, switchChoice: 'yes', exec });
-  assert.deepStrictEqual(calls[2].args, ['-c', 'SOURCE-OF-UPGRADE', 'FETCH_HEAD', '--json', '--switch', 'yes']);
+  assert.deepStrictEqual(calls[2].args, ['-I', '-c', 'SOURCE-OF-UPGRADE', 'FETCH_HEAD', '--json', '--switch', 'yes']);
   await runUpgrade('/p', { url: URL, switchChoice: 'no', exec });
   assert.deepStrictEqual(calls[5].args.slice(-2), ['--switch', 'no']);
 });

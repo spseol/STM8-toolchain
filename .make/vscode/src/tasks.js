@@ -1,4 +1,17 @@
 'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+
+const OWN_LABEL = /"label"\s*:\s*"stm8: build"/; // tasks.json is JSONC (comments), so no JSON.parse
+
+/** True when FOLDER's .vscode/tasks.json defines the label `stm8: build` itself; a read error means no. */
+function hasOwnBuildTask(folder) {
+  try {
+    return OWN_LABEL.test(fs.readFileSync(path.join(folder.uri.fsPath, '.vscode', 'tasks.json'), 'utf8'));
+  } catch {
+    return false;
+  }
+}
 
 /**
  * The build task `stm8: build` that launch.json uses as preLaunchTask. VS Code labels a task
@@ -16,10 +29,15 @@ function buildTask(vscode, folder) {
   return task;
 }
 
-/** Offers the build task in every workspace folder. Returns a Disposable. */
+/**
+ * Offers the build task in every workspace folder whose tasks.json does not define `stm8: build`
+ * already (the toolchain ships one, two tasks with the same label would make F5 ask). Returns a Disposable.
+ */
 function registerBuildTask(vscode) {
   return vscode.tasks.registerTaskProvider('stm8', {
-    provideTasks: () => (vscode.workspace.workspaceFolders || []).map((folder) => buildTask(vscode, folder)),
+    provideTasks: () => (vscode.workspace.workspaceFolders || [])
+      .filter((folder) => !hasOwnBuildTask(folder))
+      .map((folder) => buildTask(vscode, folder)),
     // VS Code gives back a task from tasks.json ({ type: 'stm8' }); the result must keep its definition
     resolveTask: (task) => {
       const folder = task.scope;

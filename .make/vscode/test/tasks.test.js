@@ -1,6 +1,9 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { registerBuildTask, buildTask } = require('../src/tasks');
 
 // A hand-written fake of the parts of `vscode` that tasks.js uses.
@@ -89,4 +92,44 @@ test('resolveTask_ignores_other_types_and_non_folder_scopes', () => {
 test('buildTask_is_exported', () => {
   const { vscode } = fakeVscode([]);
   assert.strictEqual(buildTask(vscode, folderA).name, 'build');
+});
+
+/** A workspace folder in a temporary directory; TASKS is the text of its .vscode/tasks.json (null: none). */
+function realFolder(tasks, index = 0) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stm8-tasks-'));
+  if (tasks !== null) {
+    fs.mkdirSync(path.join(dir, '.vscode'));
+    fs.writeFileSync(path.join(dir, '.vscode', 'tasks.json'), tasks);
+  }
+  return { uri: { fsPath: dir }, name: path.basename(dir), index };
+}
+
+const TOOLCHAIN_TASKS = `{
+    // shipped with the toolchain (JSONC: comments are allowed)
+    "version": "2.0.0",
+    "tasks": [ { "label" :  "stm8: build", "type": "shell", "command": "make debug-files" } ]
+}`;
+
+test('provideTasks_omits_folders_whose_tasks_json_defines_stm8_build', () => {
+  const own = realFolder(TOOLCHAIN_TASKS);
+  const other = realFolder('{ "version": "2.0.0", "tasks": [ { "label": "lint", "type": "shell" } ] }', 1);
+  const none = realFolder(null, 2);
+  const { vscode, seen } = fakeVscode([own, other, none]);
+  registerBuildTask(vscode);
+  assert.deepStrictEqual(seen.provider.provideTasks().map((task) => task.scope), [other, none]);
+});
+
+test('provideTasks_provides_the_task_when_tasks_json_cannot_be_read', () => {
+  const broken = realFolder(null);
+  fs.mkdirSync(path.join(broken.uri.fsPath, '.vscode', 'tasks.json'), { recursive: true }); // a folder: read fails
+  const { vscode, seen } = fakeVscode([broken]);
+  registerBuildTask(vscode);
+  assert.deepStrictEqual(seen.provider.provideTasks().map((task) => task.scope), [broken]);
+});
+
+test('resolveTask_still_resolves_in_a_folder_with_its_own_tasks_json', () => {
+  const own = realFolder(TOOLCHAIN_TASKS);
+  const { vscode, seen } = fakeVscode([own]);
+  registerBuildTask(vscode);
+  assert.strictEqual(seen.provider.resolveTask({ definition: { type: 'stm8' }, scope: own }).scope, own);
 });

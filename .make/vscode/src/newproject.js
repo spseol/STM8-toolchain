@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
@@ -99,6 +100,12 @@ async function createProject({ url, parent, name, mediaDir, exec = run }) {
 
 const CHOOSE = 'Choose another folder…';
 
+/** The setting stm8.projectsFolder as an absolute path (a leading ~ is the home folder), or null. */
+function absoluteFolder(value) {
+  const folder = /^~(?=$|[/\\])/.test(value) ? path.join(os.homedir(), value.slice(1)) : value;
+  return path.isAbsolute(folder) ? folder : null;
+}
+
 /** The UI of `STM8: New Project…`: folder, name, progress, warnings, opening the folder. */
 async function newProjectFlow(vscode, { createProject: create = createProject, context }) {
   const config = vscode.workspace.getConfiguration('stm8');
@@ -116,6 +123,14 @@ async function newProjectFlow(vscode, { createProject: create = createProject, c
   };
 
   let folder = config.get('projectsFolder');
+  if (folder && !absoluteFolder(folder)) {
+    await vscode.window.showWarningMessage(
+      `The setting stm8.projectsFolder must be an absolute path (it is "${folder}"). Choose the folder for your projects.`,
+    );
+    folder = undefined;
+  } else if (folder) {
+    folder = absoluteFolder(folder);
+  }
   if (!folder) {
     folder = await chooseFolder();
   } else {
@@ -150,4 +165,4 @@ async function newProjectFlow(vscode, { createProject: create = createProject, c
   await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(created.dir), { forceNewWindow });
 }
 
-module.exports = { validateName, renderReadme, createProject, newProjectFlow };
+module.exports = { validateName, renderReadme, createProject, newProjectFlow, absoluteFolder };

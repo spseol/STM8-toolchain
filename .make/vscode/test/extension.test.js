@@ -536,13 +536,29 @@ test('update_refused_shows_the_error', async () => {
 });
 
 test('update_with_conflicts_opens_the_makefile_and_explains', async () => {
-  const { seen } = upgrading({ code: 2, output: 'Makefile: conflict.' });
+  const { seen } = upgrading({ code: 2, output: 'Makefile: conflict.\nlaunch.json: replaced (original saved as /proj/.vscode/launch.json.bak).', conflict: true });
   await seen.commands['stm8.updateToolchain']();
   assert.deepStrictEqual(seen.opened, ['/proj/Makefile']);
   assert.strictEqual(seen.shown.length, 1);
   const [, text] = messagesOf(seen, 'warning')[0];
   assert.match(text, /<<<<<<</);
   assert.match(text, /cannot build|cannot be built|impossible|will not build/i);
+  assert.match(text, /launch\.json\.bak/); // the summary is shown too
+});
+
+test('code_2_without_a_conflict_is_an_error_and_opens_nothing', async () => {
+  const { seen } = upgrading({ code: 2, output: 'usage: upgrade.py ...' });
+  await seen.commands['stm8.updateToolchain']();
+  assert.deepStrictEqual(seen.opened, []);
+  assert.match(messagesOf(seen, 'error')[0][1], /usage: upgrade\.py/);
+});
+
+test('update_without_an_open_folder_does_nothing', async () => {
+  const { seen, vscode, calls } = upgrading({ code: 0, output: 'x' });
+  vscode.workspace.workspaceFolders = undefined;
+  await seen.commands['stm8.updateToolchain']();
+  assert.strictEqual(calls.length, 0);
+  assert.ok(seen.messages.some(([, text]) => text === 'Open the STM8 project folder first.'), JSON.stringify(seen.messages));
 });
 
 test('variant_switch_asks_and_reruns_with_yes', async () => {
@@ -718,6 +734,30 @@ test('choosing_another_folder_stores_it', async () => {
   await seen.commands['stm8.newProject']();
   assert.deepStrictEqual(seen.updates, [['stm8', 'projectsFolder', '/other', 1]]);
   assert.strictEqual(calls[0].parent, '/other');
+});
+
+test('projects_folder_with_tilde_is_expanded_to_the_home_folder', async () => {
+  const { seen, calls } = newProject();
+  seen.projectsFolder = '~/stm8';
+  seen.pick = (items) => items[0];
+  seen.inputText = 'lab';
+  await seen.commands['stm8.newProject']();
+  const home = path.join(os.homedir(), 'stm8');
+  assert.strictEqual(seen.picks[0][0][0].label, `Create in ${home}`);
+  assert.strictEqual(calls[0].parent, home);
+});
+
+test('relative_projects_folder_is_rejected_and_the_folder_asked_again', async () => {
+  const { seen, calls } = newProject();
+  seen.projectsFolder = 'projects';
+  seen.dialogResult = [{ fsPath: '/chosen' }];
+  seen.inputText = 'lab';
+  await seen.commands['stm8.newProject']();
+  assert.match(seen.messages[0][1], /stm8\.projectsFolder.*absolute/);
+  assert.deepStrictEqual(seen.picks, []);
+  assert.strictEqual(seen.dialogs.length, 1);
+  assert.deepStrictEqual(seen.updates, [['stm8', 'projectsFolder', '/chosen', 1]]);
+  assert.strictEqual(calls[0].parent, '/chosen');
 });
 
 test('name_is_validated_while_typing', async () => {

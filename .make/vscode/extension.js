@@ -172,12 +172,13 @@ function activate(context) {
       await vscode.window.showInformationMessage(
         `Toolchain updated.\n${summary}\nNothing was committed – review the changes (git diff) and commit them when you are happy.`,
       );
-    } else if (result.code === 2) {
+    } else if (result.code === 2 && result.conflict) {
       const document = await vscode.workspace.openTextDocument(path.join(root, 'Makefile'));
       await vscode.window.showTextDocument(document);
       await vscode.window.showWarningMessage(
         'The toolchain was updated, but your Makefile and the new one disagree. The Makefile now contains conflict markers '
-        + '(<<<<<<<, =======, >>>>>>>). Choose Accept Current/Incoming for each one and save; the project will not build until the markers are gone.',
+        + '(<<<<<<<, =======, >>>>>>>). Choose Accept Current/Incoming for each one and save; the project will not build until the markers are gone.'
+        + `${result.output ? `\n${result.output}` : ''}`,
       );
     } else {
       await vscode.window.showErrorMessage(result.output || `Update Toolchain failed (code ${result.code}).`);
@@ -191,6 +192,10 @@ function activate(context) {
       return;
     }
     const root = rootOf();
+    if (!root) { // execFile would run git and python3 in the cwd of the editor (maybe $HOME)
+      await vscode.window.showWarningMessage('Open the STM8 project folder first.');
+      return;
+    }
     const url = vscode.workspace.getConfiguration('stm8').get('toolchainUrl');
     const go = (switchChoice) => withProgress('Updating the STM8 toolchain…', () => upgrade.runUpgrade(root, { url, switchChoice }));
     let result = await go();

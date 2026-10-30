@@ -11,6 +11,7 @@ never printed and never stored in the repository.
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -112,6 +113,13 @@ class Releaser:
         tag = f"vscode-v{version}"
         if self.git("rev-parse", "-q", "--verify", f"refs/tags/{tag}").returncode == 0:
             raise Refused(f"The tag {tag} already exists, bump 'version' in {EXTENSION_DIR / 'package.json'}.")
+        changelog = self.root / EXTENSION_DIR / "CHANGELOG.md"
+        try:
+            text = changelog.read_text(encoding="utf-8")
+        except OSError:
+            text = ""
+        if not re.search(rf"^## {re.escape(version)}(?=\s|$)", text, re.M):
+            raise Refused(f"{EXTENSION_DIR / 'CHANGELOG.md'} has no heading '## {version}', describe the release there first.")
         return version, tag
 
     # --- step 3 to 5: token, tests, VSIX --------------------------------------------------------

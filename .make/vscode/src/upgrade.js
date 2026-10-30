@@ -10,8 +10,10 @@ const message = (error) => `${error.stderr || ''}`.trim() || `${error.message ||
 /**
  * Updates the project in ROOT to the toolchain at URL: fetches it, then runs its own
  * .make/upgrade.py (so the newest logic always applies). Never throws for a failed upgrade:
- * the result is { code, output, needsSwitch? } with the exit code of upgrade.py
+ * the result is { code, output, needsSwitch?, conflict? } with the exit code of upgrade.py
  * (0 done, 1 refused, 2 done with conflicts in Makefile, 3 asks whether to switch the Makefile variant).
+ * Code 2 counts as a conflict (conflict: true) only with the JSON report saying so: Python and
+ * argparse exit with 2 on usage errors, which is then a failure (code 1).
  */
 async function runUpgrade(root, { url, switchChoice, exec = run } = {}) {
   const options = { cwd: root, maxBuffer: MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } };
@@ -28,7 +30,8 @@ async function runUpgrade(root, { url, switchChoice, exec = run } = {}) {
     return { code: 1, output: `The toolchain at ${url} has no .make/upgrade.py, nothing was changed.` };
   }
 
-  const args = ['-c', source, 'FETCH_HEAD', '--json', ...(switchChoice ? ['--switch', switchChoice] : [])];
+  // -I: the cwd is the project, whose difflib.py or json.py must not replace the standard library
+  const args = ['-I', '-c', source, 'FETCH_HEAD', '--json', ...(switchChoice ? ['--switch', switchChoice] : [])];
   let code = 0;
   let stdout;
   let stderr = '';
@@ -50,8 +53,18 @@ async function runUpgrade(root, { url, switchChoice, exec = run } = {}) {
     }
   }
   if (code === 1) return { code, output: stderr.trim() };
+  let report = null;
+  try {
+    report = JSON.parse(lines[lines.length - 1]);
+  } catch {
+    // not a report
+  }
+  if (code === 2 && !(report && report.makefile === 'conflict')) {
+    return { code: 1, output: stderr.trim() || String(stdout).trim() || 'Update Toolchain failed (code 2).' };
+  }
   lines.pop(); // the last line is the report as JSON; the lines before it are for the student
-  return { code, output: lines.join('\n').trim() };
+  const output = lines.join('\n').trim();
+  return code === 2 ? { code, output, conflict: true } : { code, output };
 }
 
 module.exports = { runUpgrade };

@@ -82,6 +82,7 @@ def setup(tmp_path):
     extension = repo / ".make" / "vscode"
     (extension / "test").mkdir(parents=True)
     (extension / "package.json").write_text(json.dumps({"name": "x", "publisher": "p", "version": VERSION}))
+    (extension / "CHANGELOG.md").write_text(f"# Changelog\n\n## {VERSION}\n\n- something\n\n## 1.2.2\n")
     (extension / "test" / "a.test.js").write_text("")
     (extension / "test" / "b.test.js").write_text("")
     git(repo, "add", "-A")
@@ -159,6 +160,18 @@ def test_refuses_existing_tag(setup, capsys):
     assert not {"pytest", "node", "pack", "npx"} & set(setup.runner.programs())
     assert tags(setup.repo) == [TAG]
     assert TAG in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("changelog", [None, "# Changelog\n\n## 1.2.2\n", "# Changelog\n\n## 1.2.30\n", "1.2.3\n"])
+def test_refuses_without_changelog_entry(setup, capsys, changelog):
+    path = setup.repo / ".make" / "vscode" / "CHANGELOG.md"
+    if changelog is None:
+        path.unlink()
+    else:
+        path.write_text(changelog)
+    git(setup.repo, "commit", "-q", "-am", "changelog")
+    git(setup.repo, "push", "-q", "origin", "main")
+    assert_refused(setup, capsys, "CHANGELOG.md", f"## {VERSION}")
 
 
 def test_refuses_without_token(setup, capsys):

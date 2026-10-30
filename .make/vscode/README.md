@@ -119,8 +119,8 @@ session with a message instead of hanging. The peripheral registers come from th
 
 ## Links
 
-- Toolchain: <https://github.com/spseol/STM8S-toolchain>
-  (mirror: <https://gitlab.com/spseol/mit-no/STM8S-toolchain>)
+- Toolchain: <https://gitlab.com/spseol/mit-no/STM8S-toolchain>
+  (public mirror on GitHub: <https://github.com/spseol/STM8S-toolchain>)
 - Documentation in Czech: <https://chytrosti.marrek.cz/stm8oss.html>
 - Issues: <https://github.com/spseol/STM8S-toolchain/issues>
 
