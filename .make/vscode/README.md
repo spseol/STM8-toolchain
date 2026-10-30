@@ -8,18 +8,20 @@ which is used to teach microcontroller programming.
 
 ## What it does
 
-- **Build and flash** the project with a click in the status bar (`make` and `make flash`);
-  compiler errors and warnings appear in the Problems panel.
+- **Build and flash** the project with a click in the status bar: it runs `make` / `make flash` in
+  a terminal. Compiler errors and warnings appear in the Problems panel when the build is run by
+  `F5` or by the `stm8: build` task (*Terminal > Run Task*).
 - **Debug with `F5`**: the project is built, uploaded to the chip and stopped at `main()`.
   Breakpoints, stepping, variables, CPU registers and the **peripheral registers (SFR)** of your chip
   in the *STM8 Peripherals* view, with a bit-by-bit breakdown and writing of single bits.
 - **Status bar buttons** for *Build*, *Flash*, *Debug* and the target chip.
-- **New projects**: `STM8: New Project…` creates a ready-to-build project.
+- **New projects**: `STM8: New Project…` clones the toolchain into a new project folder and opens it.
 - **Toolchain updates**: `STM8: Update Toolchain` brings an existing project up to date.
 
 ## Requirements
 
-Verified on Linux. You need:
+Linux only: the extension relies on `lsusb`, `pgrep` and a pipe to OpenOCD; Windows and macOS are not
+supported or tested. You need:
 
 - `make`, `python3` and `git`
 - [SDCC](http://sdcc.sourceforge.net/) (the compiler)
@@ -33,21 +35,29 @@ No Node.js or npm is needed.
 ## Getting started
 
 1. Run **`STM8: New Project…`** from the Command Palette (or use the button in the empty Explorer).
-   The project is created next to your other STM8 projects, because they share the SPL library in
-   `../SPLSPL`.
+   The toolchain is cloned into a new folder in your projects folder (the `stm8.projectsFolder`
+   setting; the first time you choose it), because all projects share the SPL library in `../SPLSPL`.
+   The project is opened (in a new window if a folder is already open). It is a git repository on
+   the branch `main` with one commit; the toolchain's own history stays on the branch `upstream`.
 2. The first build downloads the SPL library (it needs an internet connection once).
 3. Pick your chip in the status bar (it changes `DEVICE_FLASH` in the `Makefile`).
 4. Connect the board and press **`F5`**.
 
 ## Existing projects
 
-Open a project that was cloned from the toolchain and run **`STM8: Update Toolchain`**. It downloads
-the current toolchain and replaces the toolchain files: `.make/` and `.vscode/launch.json` (an
-untracked original is saved as a `.bak`). It never touches your sources (`src/`, `inc/`) or your
-`README`. Your `Makefile` is merged, so your settings (chip, frequency, compiler path) stay and the
-new parts come from the toolchain; a conflict is reported instead of being overwritten. If the project
+Open a project that was cloned from the toolchain and run **`STM8: Update Toolchain`**. The project
+must be a git repository with at least one commit, and `.make`, `Makefile` and `.vscode/launch.json`
+must have no uncommitted changes; otherwise the update refuses and changes nothing.
+
+It downloads the current toolchain and replaces the toolchain files: `.make/` and
+`.vscode/launch.json` (an untracked original is saved as a `.bak`), and appends the missing lines to
+`.gitignore`. It never touches your sources (`src/`, `inc/`) or your `README`. Your `Makefile` is
+merged, so your settings (chip, frequency, compiler path) stay and the new parts come from the
+toolchain. If your edits and the new ones collide, the `Makefile` is left with conflict markers
+(`<<<<<<<`) that you resolve by hand; the project does not build until they are gone. If the project
 uses `Makefile-sdcc-gas` or `Makefile-sdccrm`, the update offers a switch to the default
-`Makefile-sdcc`, the only variant the debugger supports; if you decline, nothing is changed.
+`Makefile-sdcc`, the only variant the debugger supports. The switch carries over only the chip
+(`DEVICE_FLASH`), not other edits of the `Makefile`; if you decline, nothing is changed.
 Nothing is committed or staged, so you can review the result with `git diff`.
 
 The extension also offers the update when it opens a project with an older toolchain.
@@ -63,7 +73,7 @@ The extension also offers the update when it opens a project with an older toolc
 
 Open the project folder and press `F5` (configuration *STM8 debug*; without a `launch.json` the
 default one is used). The task `stm8: build` runs `make debug-files` first (in a new project it downloads SPL
-before that); compiler errors appear in the Problems panel.
+before that); compiler errors appear in the Problems panel. The same task is *Terminal > Run Task > stm8: build*.
 
 **STM8 Peripherals** (Run and Debug sidebar) lists the peripherals of the chip set in the `Makefile`.
 Expand one to read its registers at every stop. Changes since the previous stop are yellow.

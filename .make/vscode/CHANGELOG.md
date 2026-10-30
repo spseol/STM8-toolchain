@@ -7,7 +7,7 @@ All notable changes to this extension are documented here.
 ### Added
 
 - `STM8: New Project…` clones the STM8S toolchain into a new project folder next to your other
-  projects (they share the SPL library in `../SPLSPL`) and offers to open it. The welcome view of an
+  projects (they share the SPL library in `../SPLSPL`) and opens it. The welcome view of an
   empty Explorer has a button for it. Setting `stm8.projectsFolder`.
 - `STM8: Update Toolchain` brings the toolchain files of an existing project (`.make/`, `Makefile`)
   up to date without touching your sources (`make upgrade` does the same from a terminal). It is
