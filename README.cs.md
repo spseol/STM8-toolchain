@@ -74,6 +74,7 @@ endif
 | `make stm8flash` | záložní metoda nahrávání (používá [stm8flash](https://github.com/vdudouyt/stm8flash)) |
 | `make stm8flash-unlock` | odstraní ochranu čtení přes stm8flash |
 | `make debug` | ladění jedním příkazem: přeloží elf, nahraje ho, zastaví na `main()` a otevře [cgdb](https://cgdb.github.io/) (bez cgdb gdb TUI), viz [Ladění](#ladění) |
+| `make upgrade` | aktualizuje `.make/` a `Makefile` existujícího projektu na aktuální toolchain, viz [Aktualizace toolchainu](#aktualizace-toolchainu) |
 | `make vscode` | nainstaluje rozšíření pro ladění do VS Code / VSCodium (jednou na počítač), viz [VS Code](#vs-code--vscodium) |
 | `make cgdb` | totéž co `make debug` |
 | `make gdb` | totéž, ale v STM8-gdb TUI módu |
@@ -144,8 +145,12 @@ jde upravit i ručně, třeba připravit k příkladu sledované proměnné.
 
 Stejné ladění funguje ve VS Code (nebo VSCodium) s rozšířením z `.make/vscode/`:
 
-1. `make vscode` rozšíření zabalí a nainstaluje (`code` nebo `codium` musí být v `PATH`; stačí jednou na počítač).
-2. Restartuj editor a otevři složku s projektem.
+1. Nainstaluj rozšíření (stačí jednou na počítač). Je určeno k instalaci z obchodu s rozšířeními tvého editoru:
+   hledej *STM8 Toolchain Debugger* (vydavatel `spseol`) na Open VSX (VSCodium) nebo ve Visual Studio Marketplace
+   (VS Code), jakmile tam bude zveřejněno. Do té doby a pro vývoj `make vscode` rozšíření z `.make/vscode/`
+   zabalí a nainstaluje (`code` nebo `codium` musí být v `PATH`).
+2. Restartuj editor. Nový projekt vytvoř příkazem **`STM8: New Project…`** (Command Palette; naklonuje toolchain
+   do nové složky, viz nastavení `stm8.projectsFolder`), nebo otevři složku existujícího projektu.
 3. Stiskni `F5`. Projekt se přeloží, nahraje do chipu a program se zastaví na `main()`.
 
 Breakpointy, krokování, proměnné i registry procesoru fungují jako obvykle. Panel **STM8 Peripherals**
@@ -158,6 +163,21 @@ Jednotlivé bity takových registrů nejdou měnit (zápis by registr nejdřív 
 [`.make/vscode/README.md`](.make/vscode/README.md).
 
 Potřebuje `stm8-gdb` 15 nebo novější a `openocd` v `PATH`, stejně jako `make debug`.
+
+#### Aktualizace toolchainu
+
+Starší projekt má starší `.make/`. Ve VS Code spusť **`STM8: Update Toolchain`** (rozšíření ji samo nabídne,
+když starší projekt pozná); bez editoru `make upgrade`, nebo, pokud ho tvůj projekt ještě nemá:
+
+```bash
+git fetch https://gitlab.com/spseol/mit-no/STM8S-toolchain.git main
+python3 -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD
+```
+
+Obnoví `.make/` a `.vscode/launch.json` a změny toolchainu slije do tvého `Makefile` (čip, frekvence a cesty
+zůstanou; když se změny střetnou, zůstanou v `Makefile` značky konfliktu `<<<<<<<`, které vyřešíš ručně).
+Nikdy nesahá na `src/`, `inc/` ani na tvé README a nic necommituje, takže výsledek zkontroluj přes `git diff`
+a commitni sám. Vlastní změny v `.make/`, `Makefile` a `.vscode/launch.json` nejdřív commitni.
 
 
 ## Závislosti

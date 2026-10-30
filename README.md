@@ -73,6 +73,7 @@ endif
 | `make stm8flash-unlock` | removes read protection via stm8flash |
 | `make debug` | one-command debugging: builds the elf, uploads it, stops at `main()` and opens [cgdb](https://cgdb.github.io/) (gdb TUI without cgdb), see [Debugging](#debugging) |
 | `make cgdb` | same as `make debug` |
+| `make upgrade` | updates `.make/` and the `Makefile` of an existing project to the current toolchain, see [Updating the toolchain](#updating-the-toolchain) |
 | `make vscode` | installs the debugger extension into VS Code / VSCodium (once per computer), see [VS Code](#vs-code--vscodium) |
 | `make gdb` | same, but in STM8-gdb TUI mode |
 | `make openocd` | starts a standalone OpenOCD on port 3333 (for manual connection; `make debug` does not need it) |
@@ -144,8 +145,13 @@ per line) can be edited by hand, e.g. to ship watched variables with an example.
 
 The same debugging works in VS Code (or VSCodium) with the extension from `.make/vscode/`:
 
-1. `make vscode` packages the extension and installs it (`code` or `codium` must be in `PATH`; once per computer).
-2. Restart the editor and open the project folder.
+1. Install the extension (once per computer). It is meant to be installed from the extension marketplace
+   of your editor: search for *STM8 Toolchain Debugger* (publisher `spseol`) on Open VSX (VSCodium) or in the
+   Visual Studio Marketplace (VS Code), as soon as it has been published there. Until then, and for
+   development, `make vscode` packages the extension from `.make/vscode/` and installs it
+   (`code` or `codium` must be in `PATH`).
+2. Restart the editor. Create a project with **`STM8: New Project…`** (Command Palette; it clones the toolchain
+   into a new folder, see `stm8.projectsFolder`), or open the folder of an existing project.
 3. Press `F5`. The project is built, uploaded to the chip and the program stops at `main()`.
 
 Breakpoints, stepping, variables and CPU registers work as usual. The **STM8 Peripherals** view
@@ -159,6 +165,22 @@ has *Build*, *Flash*, *Debug* and the target chip (click it to switch). Details 
 [`.make/vscode/README.md`](.make/vscode/README.md).
 
 It needs `stm8-gdb` 15 or newer and `openocd` in `PATH`, as `make debug` does.
+
+#### Updating the toolchain
+
+A project created earlier has an older `.make/`. In VS Code run **`STM8: Update Toolchain`** (the extension offers
+it by itself when it finds an older project); without the editor run `make upgrade`, or, if your project
+does not have that target yet:
+
+```bash
+git fetch https://gitlab.com/spseol/mit-no/STM8S-toolchain.git main
+python3 -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD
+```
+
+It refreshes `.make/` and `.vscode/launch.json` and merges the toolchain changes into your `Makefile`
+(your chip, frequency and paths stay; if the changes collide, conflict markers `<<<<<<<` are left in the `Makefile`
+for you to resolve). It never touches `src/`, `inc/` or your README and commits nothing, so review the result with
+`git diff` and commit it yourself. Commit your own changes in `.make/`, `Makefile` and `.vscode/launch.json` first.
 
 
 ## Dependencies
