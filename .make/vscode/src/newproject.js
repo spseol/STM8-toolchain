@@ -37,9 +37,62 @@ function renderReadme(template, name) {
 }
 
 /**
+ * The entries of .make/prune.txt: one path relative to the project per line, `#` comments and blank
+ * lines skipped. Never returned (the list comes from a downloaded repository): absolute paths,
+ * backslashes, `..` segments and everything in .git. Same rules as in stm8newproject and upgrade.py.
+ */
+function parsePruneList(text) {
+  const entries = [];
+  for (const raw of String(text).split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#') || line.includes('\\') || /^([/]|[A-Za-z]:)/.test(line)) continue;
+    const parts = line.split('/').filter((part) => part && part !== '.');
+    if (parts.length === 0 || parts.includes('..') || parts[0] === '.git') continue;
+    entries.push(parts.join('/'));
+  }
+  return [...new Set(entries)];
+}
+
+/**
+ * Removes what .make/prune.txt lists (tests and developer scripts a student does not need) from the
+ * working tree and the index of the fresh clone in DIR. No list, nothing to do. Returns warnings
+ * for entries that could not be removed; an entry that leads outside of DIR through a symbolic link is one.
+ */
+async function pruneProject(dir, exec, options) {
+  let text;
+  try {
+    text = fs.readFileSync(path.join(dir, '.make', 'prune.txt'), 'utf8');
+  } catch {
+    return [];
+  }
+  const warnings = [];
+  const root = fs.realpathSync(dir);
+  for (const entry of parsePruneList(text)) {
+    const target = path.join(dir, ...entry.split('/'));
+    try {
+      let parent;
+      try {
+        parent = fs.realpathSync(path.dirname(target));
+      } catch {
+        continue; // the folder is not there, so neither is the entry
+      }
+      if (parent !== root && !parent.startsWith(root + path.sep)) throw new Error('it leads outside of the project through a symbolic link');
+      // --literal-pathspecs: no globs; the index first, then whatever was untracked
+      await exec('git', ['--literal-pathspecs', 'rm', '-r', '-f', '-q', '--ignore-unmatch', '--', entry], options);
+      fs.rmSync(target, { recursive: true, force: true });
+    } catch (error) {
+      warnings.push(`${entry} was not removed from the new project (${message(error).split('\n')[0]}); delete it by hand if you do not need it.`);
+    }
+  }
+  return warnings;
+}
+
+/**
  * Creates a project like the stm8newproject script: clones the toolchain, keeps its history on the
  * branch `upstream` (the remote is `upstream` as well, which is what Update Toolchain and the student's
  * `git pull upstream` expect), starts an orphan `main` with a project README and a schema image.
+ * Files listed in .make/prune.txt (extension tests, release scripts) are removed first, so `main`
+ * never has them. `upstream` keeps the full toolchain.
  * Everything is created in PARENT/NAME. A failed `make` or `git commit` is only a warning.
  */
 async function createProject({ url, parent, name, mediaDir, exec = run }) {
@@ -66,7 +119,7 @@ async function createProject({ url, parent, name, mediaDir, exec = run }) {
     }
   };
   const git = (...args) => step(`git ${args.join(' ')}`, () => exec('git', args, inDir));
-  const warnings = [];
+  const warnings = await pruneProject(dir, exec, inDir);
 
   await git('branch', '-m', 'upstream');
   await git('remote', 'rename', 'origin', 'upstream');
@@ -165,4 +218,4 @@ async function newProjectFlow(vscode, { createProject: create = createProject, c
   await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(created.dir), { forceNewWindow });
 }
 
-module.exports = { validateName, renderReadme, createProject, newProjectFlow, absoluteFolder };
+module.exports = { validateName, renderReadme, parsePruneList, createProject, newProjectFlow, absoluteFolder };

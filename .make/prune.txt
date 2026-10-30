@@ -1,0 +1,20 @@
+# Files of the toolchain that a student's project does not need (extension tests,
+# release scripts, design notes). One path per line, relative to the project root,
+# no globs; an entry covers the path and everything below it. Blank lines and lines
+# starting with # are ignored, as are absolute paths and paths with a .. segment.
+#
+# Read by: STM8: New Project (.make/vscode/src/newproject.js), the stm8newproject
+# script (both delete the entries from the fresh clone before the first commit)
+# and .make/upgrade.py (does not bring the entries back).
+#
+# The VSIX built by `make vscode` (.make/vscode/pack.py) never contained these.
+.make/vscode/test
+.make/vscode/bin
+.make/vscode/pytest.ini
+.make/vscode/.pytest_cache
+.make/vscode/__pycache__
+.make/vscode/DESIGN.md
+.make/vscode/PLAN.md
+.make/vscode/SPIKE.md
+.make/vscode/release.py
+.make/vscode/RELEASING.md

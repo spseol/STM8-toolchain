@@ -7,7 +7,7 @@ const path = require('node:path');
 const { execFile, execFileSync } = require('node:child_process');
 const { promisify } = require('node:util');
 const { ToolchainError } = require('../src/project');
-const { createProject, validateName, renderReadme } = require('../src/newproject');
+const { createProject, validateName, renderReadme, parsePruneList } = require('../src/newproject');
 
 const real = promisify(execFile);
 const MEDIA = path.join(__dirname, '..', 'media');
@@ -179,4 +179,125 @@ test('renderReadme', () => {
   assert.strictEqual(renderReadme('# {{TITLE}}', ' Žák Novák 1 '), '# Žák Novák 1');
   assert.strictEqual(renderReadme('# {{TITLE}}', 'žák'), '# Žák');
   assert.strictEqual(renderReadme('# {{TITLE}}', '$&x'), '# $&x'); // no replace() patterns
+});
+
+// --- pruning dev-only files (.make/prune.txt) ---------------------------------------------
+
+/**
+ * A toolchain with a prune list. `victims` is a folder outside of every project; the list names
+ * a file in it by an absolute path and `../sentinel.txt` (the folder of the new project's parent).
+ */
+function prunedToolchain(victims, { list } = {}) {
+  const dir = toolchain();
+  const put = (name, text = `${name}\n`) => {
+    fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
+    fs.writeFileSync(path.join(dir, name), text);
+  };
+  put('.make/vscode/test/a.test.js');
+  put('.make/vscode/test/sub/b.js');
+  put('.make/vscode/release.py');
+  put('.make/vscode/pack.py');
+  put('.make/vscode/package.json');
+  put('.make/vscode/src/newproject.js');
+  put('CLAUDE.md');
+  put('inc/main.h');
+  put('lib/test/keep.c');
+  put('.make/prune.txt', list || [
+    '# dev-only files',
+    '',
+    '   ',
+    '.make/vscode/test',
+    '.make/vscode/release.py',
+    '.make/vscode/not-there.md',
+    '../sentinel.txt',
+    path.join(victims, 'abs.txt'),
+    '.make/vscode/test/../../../CLAUDE.md',
+    '.git',
+    '.',
+    '',
+  ].join('\n'));
+  git(dir, 'add', '.');
+  git(dir, 'commit', '-q', '-m', 'dev files');
+  return dir;
+}
+
+const files = (dir, ref) => git(dir, 'ls-tree', '-r', '--name-only', ref).split('\n');
+
+test('prunes_the_files_listed_in_prune_txt_before_the_first_commit', async () => {
+  const victims = tmp();
+  fs.writeFileSync(path.join(victims, 'abs.txt'), 'must survive\n');
+  const remote = prunedToolchain(victims);
+  const parent = tmp();
+  fs.writeFileSync(path.join(parent, 'sentinel.txt'), 'must survive\n');
+  const { dir, warnings } = await createProject({ url: `file://${remote}`, parent, name: 'p', mediaDir: MEDIA, exec: exec() });
+
+  assert.deepStrictEqual(warnings, []);
+  for (const gone of ['.make/vscode/test', '.make/vscode/release.py']) {
+    assert.ok(!fs.existsSync(path.join(dir, gone)), gone);
+  }
+  const onMain = files(dir, 'main');
+  assert.ok(!onMain.some((name) => name.startsWith('.make/vscode/test/') || name === '.make/vscode/release.py'), onMain.join(' '));
+  for (const kept of ['.make/prune.txt', '.make/vscode/pack.py', '.make/vscode/package.json', '.make/vscode/src/newproject.js',
+    'CLAUDE.md', 'inc/main.h', 'lib/test/keep.c', '.make/x', 'Makefile']) {
+    assert.ok(onMain.includes(kept), kept);
+    assert.ok(fs.existsSync(path.join(dir, kept)), kept);
+  }
+  // the toolchain history on upstream is untouched
+  const onUpstream = files(dir, 'upstream');
+  assert.ok(onUpstream.includes('.make/vscode/test/a.test.js'));
+  assert.ok(onUpstream.includes('.make/vscode/test/sub/b.js'));
+  assert.ok(onUpstream.includes('.make/vscode/release.py'));
+  assert.strictEqual(git(dir, 'rev-list', '--count', 'main'), '1');
+  assert.strictEqual(git(dir, 'status', '--porcelain'), '');
+  // unsafe entries (absolute, `..`, .git, .) deleted nothing
+  assert.strictEqual(fs.readFileSync(path.join(parent, 'sentinel.txt'), 'utf8'), 'must survive\n');
+  assert.strictEqual(fs.readFileSync(path.join(victims, 'abs.txt'), 'utf8'), 'must survive\n');
+  assert.ok(fs.existsSync(path.join(dir, '.git')));
+});
+
+test('without_prune_txt_nothing_is_pruned', async () => {
+  const remote = prunedToolchain(tmp());
+  git(remote, 'rm', '-q', '.make/prune.txt');
+  git(remote, 'commit', '-q', '-m', 'no list');
+  const { dir, warnings } = await createProject({ url: `file://${remote}`, parent: tmp(), name: 'p', mediaDir: MEDIA, exec: exec() });
+  assert.deepStrictEqual(warnings, []);
+  assert.ok(files(dir, 'main').includes('.make/vscode/test/a.test.js'));
+  assert.strictEqual(git(dir, 'status', '--porcelain'), '');
+});
+
+test('an_entry_through_a_symlink_deletes_nothing_outside_the_project', async () => {
+  const victims = tmp();
+  fs.writeFileSync(path.join(victims, 'abs.txt'), 'must survive\n');
+  const remote = prunedToolchain(victims, { list: '.make/link/abs.txt\n.make/vscode/release.py\n' });
+  fs.symlinkSync(victims, path.join(remote, '.make', 'link'));
+  git(remote, 'add', '.');
+  git(remote, 'commit', '-q', '-m', 'link');
+  const { dir } = await createProject({ url: `file://${remote}`, parent: tmp(), name: 'p', mediaDir: MEDIA, exec: exec() });
+  assert.strictEqual(fs.readFileSync(path.join(victims, 'abs.txt'), 'utf8'), 'must survive\n');
+  assert.ok(!fs.existsSync(path.join(dir, '.make', 'vscode', 'release.py'))); // the safe entry still works
+  assert.strictEqual(git(dir, 'rev-list', '--count', 'main'), '1');
+});
+
+test('a_failing_prune_is_a_warning_and_the_project_is_finished', async () => {
+  const remote = prunedToolchain(tmp());
+  const real = exec();
+  const broken = async (cmd, args, options) => {
+    if (cmd === 'git' && args.includes('rm')) throw new Error('boom');
+    return real(cmd, args, options);
+  };
+  const { dir, warnings } = await createProject({ url: `file://${remote}`, parent: tmp(), name: 'p', mediaDir: MEDIA, exec: broken });
+  assert.ok(warnings.length >= 1);
+  assert.match(warnings.join('\n'), /\.make\/vscode\/test/);
+  assert.match(warnings.join('\n'), /boom/);
+  assert.strictEqual(git(dir, 'rev-list', '--count', 'main'), '1');
+  assert.ok(fs.existsSync(path.join(dir, 'README.md')));
+});
+
+test('parsePruneList', () => {
+  const text = [
+    '# comment', '', '  ', 'a/b', ' c/d/ ', './e', 'f//g', '/abs', '\\win', 'C:/x', '../up', 'a/../b', '..', '.', '.git', '.git/hooks',
+    '#.make/hidden', 'a b/čau', 'dup', 'dup', '',
+  ].join('\r\n');
+  assert.deepStrictEqual(parsePruneList(text), ['a/b', 'c/d', 'e', 'f/g', 'a b/čau', 'dup']);
+  assert.deepStrictEqual(parsePruneList(''), []);
 });

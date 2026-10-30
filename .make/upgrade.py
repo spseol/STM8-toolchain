@@ -137,7 +137,7 @@ def _show(project, ref, path):
 
 def _history(project, ref, path):
     """Distinct contents (bytes) of PATH in the newest HISTORY_LIMIT commits of REF that changed it."""
-    revs = _git_bytes(project, "rev-list", f"--max-count={HISTORY_LIMIT}", ref, "--", path)[1].split()
+    revs = _git_bytes(project, "rev-list", "--full-history", f"--max-count={HISTORY_LIMIT}", ref, "--", path)[1].split()
     query = b"".join(rev + b":" + path.encode() + b"\n" for rev in revs)
     try:
         out = subprocess.run(["git", "cat-file", "--batch"], cwd=project, input=query,
@@ -156,9 +156,10 @@ def _history(project, ref, path):
     return list(versions.values())
 
 
-def _merge_base(project, ref, path, head):
+def _merge_base(project, ref, path, head, theirs):
     """The version of PATH in the history of REF closest to HEAD (the project's committed copy,
-    bytes; the student may have edited it). None when there is no version close enough to trust."""
+    bytes; the student may have edited it). None when there is no version close enough to trust.
+    THEIRS (the new version) is no base: merging against it would never show what changed."""
     versions = _history(project, ref, path)
     if head is None or not versions:
         return None
@@ -167,7 +168,9 @@ def _merge_base(project, ref, path, head):
     text = head.decode(errors="replace")
     distance, best = min(((_differences(text, data.decode(errors="replace")), index)
                           for index, data in enumerate(versions)))
-    return versions[best] if distance <= REFUSE_RATIO * len(text.splitlines()) else None
+    if distance > REFUSE_RATIO * len(text.splitlines()) or versions[best] == theirs:
+        return None
+    return versions[best]
 
 
 def _merge_makefile(project, ours, base, theirs):
@@ -215,10 +218,36 @@ def _write(path, data, mode=None):
     return changed
 
 
-def _refresh_make_dir(project, new_files, report):
-    """Replace the files of .make/ by those of REF and delete the tracked ones REF lacks."""
+def prune_entries(text):
+    """Entries of .make/prune.txt (TEXT): paths relative to the project, one per line, `#` comments
+    and blank lines skipped. Absolute paths, backslashes, `..` segments and .git are left out, the
+    list comes from a downloaded repository. Same rules as in newproject.js and stm8newproject."""
+    entries = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("#", "/")) or "\\" in line or re.match(r"[A-Za-z]:", line):
+            continue
+        parts = [part for part in line.split("/") if part and part != "."]
+        if not parts or ".." in parts or parts[0] == ".git":
+            continue
+        entries.append("/".join(parts))
+    return list(dict.fromkeys(entries))
+
+
+def _pruned(name, entries):
+    """True when NAME is one of the prune ENTRIES or below one."""
+    return any(name == entry or name.startswith(entry + "/") for entry in entries)
+
+
+def _refresh_make_dir(project, ref, new_files, report):
+    """Replace the files of .make/ by those of REF and delete the tracked ones REF lacks.
+    What REF:.make/prune.txt lists is neither created nor replaced (students do not have it),
+    a copy that already exists is left as it is."""
     old_files = _tree(project, "HEAD", ".make")
+    pruned = prune_entries((_show(project, ref, ".make/prune.txt") or b"").decode(errors="replace"))
     for name, (mode, blob) in new_files.items():
+        if _pruned(name, pruned):
+            continue
         data = _git_bytes(project, "cat-file", "blob", blob)[1]
         if _write(project / name, data, mode):
             report.replaced += 1
@@ -308,7 +337,7 @@ def upgrade(project, ref, switch=None):
     report = Report()
     if variant == "sdcc":
         path = ".make/Makefile-sdcc"
-        base = _merge_base(project, ref, path, _show(project, "HEAD", path))
+        base = _merge_base(project, ref, path, _show(project, "HEAD", path), theirs)
         result, conflicts = _merge_makefile(project, current, base, theirs)
         if base is None:
             report.notes.append("No toolchain version close to the project's .make/Makefile-sdcc was found, so every "
@@ -322,7 +351,7 @@ def upgrade(project, ref, switch=None):
         result = _switched_makefile(current, theirs, report)
         report.makefile = "switched"
 
-    _refresh_make_dir(project, new_files, report)
+    _refresh_make_dir(project, ref, new_files, report)
     if link is not None:  # never write through it: it points into the refreshed .make/
         makefile.unlink()
         makefile.write_bytes(result)

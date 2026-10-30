@@ -9,7 +9,7 @@ from xml.etree import ElementTree
 
 import pytest
 
-from conftest import ROOT, project_copy, run_make
+from conftest import ROOT, dap_info, load_upgrade, project_copy, run_make
 
 VSCODE = ROOT / ".make" / "vscode"
 sys_path = str(VSCODE)
@@ -362,3 +362,90 @@ def test_sdccrm_scripts_use_exclude_reference_in_make():
         text = (ROOT / ".make" / name).read_text()
         assert "exclude_reference" in text, name
         assert not re.search(r"(?<!\.make/)exclude_reference", text), name
+
+
+# --- .make/prune.txt: what a new project does not get --------------------------------------
+
+# may be missing in a checkout: generated, or notes that are not committed
+OPTIONAL_PRUNED = {".make/vscode/.pytest_cache", ".make/vscode/__pycache__", ".make/vscode/SPIKE.md",
+                   ".make/vscode/PLAN.md", ".make/vscode/DESIGN.md"}
+MUST_STAY = [".make/prune.txt", ".make/upgrade.py", ".make/vscode.mk", ".make/vscode/pack.py", ".make/vscode/dap_info.py",
+             ".make/vscode/package.json", ".make/vscode/extension.js", ".make/vscode/src/newproject.js",
+             ".make/vscode/src/adapter.js", ".make/vscode/media/icon.png", ".make/vscode/README.md",
+             ".make/vscode/CHANGELOG.md", "CLAUDE.md", "Makefile", "README.md", ".vscode/launch.json", "src/main.c"]
+
+
+def prune_lines():
+    """The lines of the real .make/prune.txt that are entries."""
+    return [line.strip() for line in (ROOT / ".make" / "prune.txt").read_text().splitlines()
+            if line.strip() and not line.strip().startswith("#")]
+
+
+def pruned_by(name, entries):
+    return any(name == entry or name.startswith(entry + "/") for entry in entries)
+
+
+def test_prune_txt_entries_are_safe_and_exist():
+    entries = prune_lines()
+    assert entries
+    assert load_upgrade().prune_entries((ROOT / ".make" / "prune.txt").read_text()) == entries  # none is dropped as unsafe
+    for entry in entries:
+        assert (ROOT / entry).exists() or entry in OPTIONAL_PRUNED, f"{entry} does not exist (typo?)"
+
+
+def test_prune_txt_never_matches_what_must_stay():
+    entries = prune_lines()
+    for name in MUST_STAY:
+        assert (ROOT / name).exists(), name
+        assert not pruned_by(name, entries), name
+    tracked = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
+    stays = [name for name in tracked if name.startswith(".make/vscode/") and not pruned_by(name, entries)]
+    # what is left of the extension folder is what the VSIX is made of, plus its docs
+    assert {name.split("/")[2] for name in stays} <= {"CHANGELOG.md", "README.md", "dap_info.py", "extension.js", "media",
+                                                        "pack.py", "package.json", "src"}, stays
+
+
+@pytest.fixture(scope="module")
+def pruned_copy(tmp_path_factory):
+    """Copy of the project with the prune.txt entries deleted, like a new project has it."""
+    project = project_copy(tmp_path_factory.mktemp("pruned"))
+    for entry in prune_lines():
+        target = project / entry
+        if target.is_dir():
+            shutil.rmtree(target)
+        elif target.exists():
+            target.unlink()
+    return project
+
+
+def test_pruned_copy_is_really_pruned(pruned_copy):
+    assert not (pruned_copy / ".make" / "vscode" / "test").exists()
+    assert not (pruned_copy / ".make" / "vscode" / "release.py").exists()
+    assert (pruned_copy / ".make" / "vscode" / "pack.py").is_file()
+
+
+def test_make_vscode_works_in_a_pruned_project(pruned_copy):
+    proc = run_make(["vscode", "IDES=none-such"], cwd=pruned_copy)
+    assert proc.returncode != 0
+    assert "None of 'none-such' found in PATH" in proc.stdout + proc.stderr
+    names = zipfile.ZipFile(pruned_copy / ".make" / "vscode" / "stm8-toolchain.vsix").namelist()
+    for name in ("extension/extension.js", "extension/package.json", "extension/media/icon.png"):
+        assert name in names, name
+
+
+def test_dap_info_works_in_a_pruned_project(pruned_copy):
+    assert dap_info(cwd=pruned_copy)["deviceFlash"].startswith("stm8s")
+
+
+def test_vscode_release_explains_that_it_is_not_in_a_pruned_project(pruned_copy):
+    proc = run_make(["vscode-release"], cwd=pruned_copy)
+    assert proc.returncode != 0
+    assert ("vscode-release is only available in the full toolchain checkout "
+            "(release.py is not part of student projects).") in proc.stdout + proc.stderr
+
+
+def test_vsix_of_a_pruned_project_equals_the_full_one(pruned_copy, tmp_path):
+    out = tmp_path / "pruned.vsix"
+    subprocess.run(["python3", str(pruned_copy / ".make" / "vscode" / "pack.py"), str(out)], check=True)
+    full = zipfile.ZipFile(pack(tmp_path / "full.vsix")).namelist()
+    assert zipfile.ZipFile(out).namelist() == full

@@ -437,6 +437,41 @@ def test_no_usable_merge_base_gives_conflict_markers(tmp_path):
     assert any("No toolchain version close" in note for note in report.notes)
 
 
+def test_history_without_older_versions_is_no_merge_base(tmp_path):
+    # a remote with one commit: the only version in the history is the new file itself, which
+    # as the base would hide the change (`unchanged`, no -include .make/vscode.mk line)
+    remote = toolchain_remote(tmp_path / "remote")
+    git(remote, "checkout", "-q", "--orphan", "flat")
+    git(remote, "add", "-A")
+    git(remote, "commit", "-q", "-m", "flat")
+    git(remote, "branch", "-q", "-D", "main")
+    git(remote, "branch", "-q", "-m", "main")
+    assert git(remote, "rev-list", "--count", "main").strip() == "1"
+    project = old_project(tmp_path / "project")
+    git(project, "fetch", "-q", str(remote), "main")
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    text = (project / "Makefile").read_text()
+    assert report.makefile == "conflict"
+    assert "<<<<<<< Makefile" in text
+    assert "F_CPU=8000000" in text
+    assert any("No toolchain version close" in note for note in report.notes)
+
+
+def test_history_lists_commits_with_full_history(tmp_path, monkeypatch):
+    seen = []
+    original = upgrade._git_bytes
+
+    def spy(project, *args, **kwargs):
+        seen.append(args)
+        return original(project, *args, **kwargs)
+
+    monkeypatch.setattr(upgrade, "_git_bytes", spy)
+    remote = toolchain_remote(tmp_path)
+    upgrade._history(remote, "HEAD", ".make/Makefile-sdcc")
+    (rev_list,) = [args for args in seen if args[0] == "rev-list"]
+    assert "--full-history" in rev_list
+
+
 def test_device_flash_changed_by_the_merge_is_noted(tmp_path, monkeypatch):
     project = prepared(tmp_path)
     ours = (project / "Makefile").read_bytes()
@@ -583,3 +618,89 @@ def test_upgrade_script_is_self_contained():
     source = UPGRADE_PY.read_text()
     assert "__file__" not in source
     assert len(source.encode()) < 100_000
+
+
+# --- .make/prune.txt ----------------------------------------------------------------------------
+
+PRUNED_FILES = (".make/dev/a.js", ".make/dev/sub/b.js", ".make/dev-release.py")
+
+
+def prunable_remote(tmp_path, prune_text):
+    """toolchain_remote plus dev-only files and, when PRUNE_TEXT is not None, .make/prune.txt."""
+    remote = toolchain_remote(tmp_path / "remote")
+    for name in (*PRUNED_FILES, ".make/vscode/pack.py", ".make/y.sh", ".make/y2.sh"):
+        (remote / name).parent.mkdir(parents=True, exist_ok=True)
+        (remote / name).write_text(f"# {name}\n")
+    if prune_text is not None:
+        (remote / ".make" / "prune.txt").write_text(prune_text)
+    commit_all(remote, "dev files")
+    return remote
+
+
+def fetched(tmp_path, prune_text):
+    remote = prunable_remote(tmp_path, prune_text)
+    project = old_project(tmp_path / "project")
+    git(project, "fetch", "-q", str(remote), "main")
+    return project
+
+
+PRUNE_TEXT = "# dev-only\n\n.make/dev\n.make/dev-release.py\n.make/missing.md\n"
+
+
+def test_prune_entries():
+    assert upgrade.prune_entries(
+        "# c\n\n  \n a/b \nc/d/\n./e\nf//g\n/abs\n\\win\nC:/x\n../up\na/../b\n..\n.\n.git\n.git/hooks\nx\nx\n") == [
+        "a/b", "c/d", "e", "f/g", "x"]
+    assert upgrade.prune_entries("") == []
+
+
+def test_upgrade_does_not_bring_pruned_paths(tmp_path):
+    project = fetched(tmp_path / "pruned", PRUNE_TEXT)
+    control = fetched(tmp_path / "control", "# nothing pruned\n")
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    full = upgrade.upgrade(control, "FETCH_HEAD")
+    for name in PRUNED_FILES:
+        assert not (project / name).exists(), name
+        assert (control / name).is_file(), name
+    for name in (".make/prune.txt", ".make/vscode/pack.py", ".make/y.sh"):
+        assert (project / name).is_file(), name
+    assert full.replaced - report.replaced == len(PRUNED_FILES)
+
+
+def test_upgrade_leaves_existing_pruned_files_alone(tmp_path):
+    project = fetched(tmp_path, PRUNE_TEXT)
+    (project / ".make" / "dev").mkdir()
+    (project / ".make" / "dev-release.py").write_text("# my copy\n")
+    (project / ".make" / "dev" / "a.js").write_text("// my copy\n")
+    commit_all(project)
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    assert (project / ".make" / "dev-release.py").read_text() == "# my copy\n"
+    assert (project / ".make" / "dev" / "a.js").read_text() == "// my copy\n"
+    assert not (project / ".make" / "dev" / "sub").exists()
+    assert report.removed == 0
+
+
+def test_upgrade_ignores_unsafe_prune_entries(tmp_path):
+    project = fetched(tmp_path, "# unsafe\n.make/x/../y.sh\n/.make/y2.sh\n../project\n.make/..\n")
+    upgrade.upgrade(project, "FETCH_HEAD")
+    assert (project / ".make" / "y.sh").is_file()
+    assert (project / ".make" / "y2.sh").is_file()
+    assert (project / ".make" / "dev-release.py").is_file()
+
+
+def test_upgrade_without_prune_txt_in_ref_brings_everything(tmp_path):
+    project = fetched(tmp_path, None)
+    upgrade.upgrade(project, "FETCH_HEAD")
+    for name in PRUNED_FILES:
+        assert (project / name).is_file(), name
+
+
+def test_upgrade_with_pruned_paths_is_idempotent(tmp_path):
+    project = fetched(tmp_path, PRUNE_TEXT)
+    upgrade.upgrade(project, "FETCH_HEAD")
+    commit_all(project, "upgraded")
+    second = upgrade.upgrade(project, "FETCH_HEAD")
+    assert second.makefile == "unchanged"
+    assert second.replaced == 0
+    assert second.removed == 0
+    assert git(project, "status", "--porcelain") == ""
