@@ -25,7 +25,7 @@ test('pipeline_fetch_show_python_in_order', async () => {
   const { exec, calls } = fakeExec({ python: () => ({ stdout: `Updated .make/\n${REPORT}\n` }) });
   const result = await runUpgrade('/p', { url: URL, exec });
   assert.deepStrictEqual(calls.map((c) => [c.cmd, ...c.args.slice(0, 1)]), [['git', 'fetch'], ['git', 'show'], ['python3', '-c']]);
-  assert.deepStrictEqual(calls[0].args, ['fetch', URL, 'main']);
+  assert.deepStrictEqual(calls[0].args, ['fetch', '--', URL, 'main']);
   assert.deepStrictEqual(calls[1].args, ['show', 'FETCH_HEAD:.make/upgrade.py']);
   assert.deepStrictEqual(calls[2].args, ['-c', 'SOURCE-OF-UPGRADE', 'FETCH_HEAD', '--json']);
   for (const call of calls) {
@@ -84,4 +84,10 @@ test('missing_python_is_code_1', async () => {
   const result = await runUpgrade('/p', { url: URL, exec });
   assert.strictEqual(result.code, 1);
   assert.match(result.output, /python3/);
+});
+
+test('url_that_looks_like_an_option_stays_after_double_dash', async () => {
+  const { exec, calls } = fakeExec();
+  await runUpgrade('/p', { url: '--upload-pack=touch /tmp/x', exec });
+  assert.deepStrictEqual(calls[0].args, ['fetch', '--', '--upload-pack=touch /tmp/x', 'main']);
 });

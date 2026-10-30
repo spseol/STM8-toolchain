@@ -17,17 +17,23 @@ class ToolchainError extends Error {
   }
 }
 
-/** Paths and the OpenOCD command of the project in CWD (`make dap-info`). */
-async function readProjectInfo(cwd, { exec = run } = {}) {
-  let makefile = '';
+/** The error for a Makefile with unresolved conflict markers (after Update Toolchain), else null. */
+function makefileConflictError(cwd) {
+  let makefile;
   try {
     makefile = fs.readFileSync(path.join(cwd, 'Makefile'), 'utf8');
   } catch {
-    // no Makefile: make says so below
+    return null; // no Makefile: make says so
   }
-  if (/^<{7} /m.test(makefile)) {
-    throw new ToolchainError('Makefile has unresolved conflicts from Update Toolchain – resolve them (Accept Current/Incoming) and save');
-  }
+  return /^<{7} /m.test(makefile)
+    ? new ToolchainError('Makefile has unresolved conflicts from Update Toolchain – resolve them (Accept Current/Incoming) and save')
+    : null;
+}
+
+/** Paths and the OpenOCD command of the project in CWD (`make dap-info`). */
+async function readProjectInfo(cwd, { exec = run } = {}) {
+  const conflict = makefileConflictError(cwd);
+  if (conflict) throw conflict;
   let stdout;
   try {
     ({ stdout } = await exec('make', ['-s', '--no-print-directory', 'dap-info'], {
@@ -193,5 +199,5 @@ function spawnGdb(info, cwd) {
 }
 
 module.exports = {
-  ToolchainError, readProjectInfo, preflight, versionNotice, upgradeOffer, loadSfrModel, listChips, switchChip, openocdTail, otherOpenocd, spawnGdb,
+  ToolchainError, makefileConflictError, readProjectInfo, preflight, versionNotice, upgradeOffer, loadSfrModel, listChips, switchChip, openocdTail, otherOpenocd, spawnGdb,
 };

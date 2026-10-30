@@ -2,6 +2,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const Module = require('node:module');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { PassThrough } = require('node:stream');
 
 // extension.js needs the `vscode` module, which only exists inside the editor: a small fake.
@@ -424,6 +427,23 @@ test('failed_build_blocks_debug_anyway', async () => {
   assert.match(seen.messages.find(([kind]) => kind === 'error')[1], /build failed/i);
   seen.taskEnded({ execution: { task: { name: 'stm8: build' } }, exitCode: 0 });
   assert.deepStrictEqual(await resolve(), withTask);
+});
+
+test('failed_build_with_makefile_conflicts_shows_the_conflict_message', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ext-'));
+  fs.writeFileSync(path.join(dir, 'Makefile'), 'A=1\n<<<<<<< Makefile\nB=2\n=======\nB=3\n>>>>>>> FETCH_HEAD\n');
+  const { extension, project, seen } = load();
+  project.versionNotice = () => null;
+  project.readProjectInfo = async () => { throw new Error('must not be reached'); };
+  extension.activate(context());
+  const withTask = { ...config, preLaunchTask: 'stm8: build' };
+  seen.taskEnded({ execution: { task: { name: 'stm8: build' } }, exitCode: 2 }); // make: missing separator
+  const result = await seen.providers.stm8.resolveDebugConfigurationWithSubstitutedVariables({ uri: { fsPath: dir } }, { ...withTask });
+  assert.strictEqual(result, undefined);
+  const [, text, options] = seen.messages.find(([kind]) => kind === 'error');
+  assert.match(text, /unresolved conflicts/);
+  assert.doesNotMatch(text, /build failed/i);
+  assert.deepStrictEqual(options, { modal: true });
 });
 
 test('other_tasks_do_not_block_the_launch', async () => {

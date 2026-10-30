@@ -67,6 +67,7 @@
         "stm8.toolchainUrl": {
           "type": "string",
           "default": "https://gitlab.com/spseol/mit-no/STM8S-toolchain.git",
+          "scope": "machine-overridable",
           "description": "Git repository that STM8: Update Toolchain downloads the current toolchain (.make/) from."
         }
       }

@@ -175,6 +175,8 @@ def test_package_json_declares_update_toolchain():
     assert setting["type"] == "string"
     assert setting["default"] == "https://gitlab.com/spseol/mit-no/STM8S-toolchain.git"
     assert setting["description"]
+    # a cloned project's .vscode/settings.json must not redirect the updater (it runs the downloaded upgrade.py)
+    assert setting["scope"] == "machine-overridable"
 
 
 def test_fallback_side_effects_match_python():

@@ -46,7 +46,7 @@ test('other_openocd_false_when_pgrep_finds_none', async () => {
 
 // --- Task 9: errors, preflight, version notice -------------------------------------------
 
-const { ToolchainError, preflight, versionNotice, upgradeOffer } = require('../src/project');
+const { ToolchainError, makefileConflictError, preflight, versionNotice, upgradeOffer } = require('../src/project');
 
 const rejecting = (stderr, code = 2) => async () => {
   throw Object.assign(new Error('make failed'), { stderr, code });
@@ -84,6 +84,17 @@ test('makefile_without_conflict_markers_goes_on_to_make', async () => {
   const dir = tmp();
   fs.writeFileSync(path.join(dir, 'Makefile'), 'A=1\n# <<<<<<<no space\n');
   assert.deepStrictEqual(await readProjectInfo(dir, { exec: async () => ({ stdout: '{"a":1}' }) }), { a: 1 });
+});
+
+test('makefile_conflict_helper', () => {
+  const dir = tmp();
+  assert.strictEqual(makefileConflictError(dir), null); // missing Makefile
+  fs.writeFileSync(path.join(dir, 'Makefile'), 'A=1\n');
+  assert.strictEqual(makefileConflictError(dir), null);
+  fs.writeFileSync(path.join(dir, 'Makefile'), 'A=1\n<<<<<<< Makefile\nB=2\n');
+  const error = makefileConflictError(dir);
+  assert.ok(error instanceof ToolchainError);
+  assert.match(error.message, /unresolved conflicts/);
 });
 
 test('missing_makefile_falls_through_to_make', async () => {

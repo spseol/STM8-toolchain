@@ -16,7 +16,8 @@ const message = (error) => `${error.stderr || ''}`.trim() || `${error.message ||
 async function runUpgrade(root, { url, switchChoice, exec = run } = {}) {
   const options = { cwd: root, maxBuffer: MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } };
   try {
-    await exec('git', ['fetch', url, 'main'], options);
+    // `--`: a url that starts with - is then a repository, never an option
+    await exec('git', ['fetch', '--', url, 'main'], options);
   } catch (error) {
     return { code: 1, output: `Cannot download the toolchain from ${url}: ${message(error)}` };
   }

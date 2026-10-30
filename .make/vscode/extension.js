@@ -102,8 +102,10 @@ function activate(context) {
     async resolveDebugConfigurationWithSubstitutedVariables(folder, config) {
       const root = rootOf(folder);
       if (config.preLaunchTask && builds.has(config.preLaunchTask) && builds.get(config.preLaunchTask) !== 0) {
+        // conflict markers in the Makefile break the build ("missing separator"): say what is really wrong
+        const conflict = project.makefileConflictError(root);
         await vscode.window.showErrorMessage(
-          'The build failed, so the chip would get an old program. Fix the errors (Problems panel) and press F5 again.',
+          conflict ? conflict.message : 'The build failed, so the chip would get an old program. Fix the errors (Problems panel) and press F5 again.',
           { modal: true },
         );
         return undefined;
