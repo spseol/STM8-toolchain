@@ -66,8 +66,8 @@ The extension also offers the update when it opens a project with an older toolc
 
 | setting | default | meaning |
 |:--- |:--- |:- |
-| `stm8.toolchainUrl` | `https://gitlab.com/spseol/mit-no/STM8S-toolchain.git` | Git repository that *Update Toolchain* downloads the toolchain from. It cannot be set by a project (`.vscode/settings.json`), because the downloaded `upgrade.py` is run. |
-| `stm8.projectsFolder` | *(empty)* | Folder where *New Project* creates your projects. Keep all projects in one folder: they share the SPL library in `../SPLSPL`. |
+| `stm8.toolchainUrl` | `https://gitlab.com/spseol/mit-no/STM8S-toolchain.git` | Git repository that *Update Toolchain* downloads the toolchain from. It can only be set in your user settings; a project's `.vscode/settings.json` cannot change it, because the downloaded `upgrade.py` is run. |
+| `stm8.projectsFolder` | *(empty)* | Folder where *New Project* creates your projects. Keep all projects in one folder: they share the SPL library in `../SPLSPL`. Like `stm8.toolchainUrl`, it can only be set in your user settings. |
 
 ## Using it
 

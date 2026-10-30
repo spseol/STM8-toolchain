@@ -111,13 +111,13 @@
         "stm8.toolchainUrl": {
           "type": "string",
           "default": "https://gitlab.com/spseol/mit-no/STM8S-toolchain.git",
-          "scope": "machine-overridable",
+          "scope": "machine",
           "description": "Git repository that STM8: Update Toolchain downloads the current toolchain (.make/) from."
         },
         "stm8.projectsFolder": {
           "type": "string",
           "default": "",
-          "scope": "machine-overridable",
+          "scope": "machine",
           "description": "Folder where STM8: New Project creates your projects. Keep all projects in one folder: they share the SPL library in ../SPLSPL next to them."
         }
       }

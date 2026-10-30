@@ -266,8 +266,10 @@ def test_package_json_declares_update_toolchain():
     assert setting["type"] == "string"
     assert setting["default"] == "https://gitlab.com/spseol/mit-no/STM8S-toolchain.git"
     assert setting["description"]
-    # a cloned project's .vscode/settings.json must not redirect the updater (it runs the downloaded upgrade.py)
-    assert setting["scope"] == "machine-overridable"
+    # a cloned project's .vscode/settings.json must not redirect the updater (it runs the downloaded upgrade.py);
+    # "machine-overridable" would still let workspace/folder settings override it, only "machine" ignores them
+    assert setting["scope"] == "machine", 'scope must be "machine" (user settings only), not "machine-overridable"'
+
 
 
 def test_fallback_side_effects_match_python():
@@ -287,7 +289,7 @@ def test_new_project_command_and_settings_are_declared():
     assert commands["stm8.newProject"]["title"] == "STM8: New Project…"
     assert "stm8.newProject" not in {m["command"] for m in package["contributes"]["menus"]["commandPalette"]}
     setting = package["contributes"]["configuration"]["properties"]["stm8.projectsFolder"]
-    assert (setting["type"], setting["default"], setting["scope"]) == ("string", "", "machine-overridable")
+    assert (setting["type"], setting["default"], setting["scope"]) == ("string", "", "machine")
     assert "../SPLSPL" in setting["description"]
     welcome = package["contributes"]["viewsWelcome"]
     assert any(w["view"] == "explorer" and w["when"] == "workbenchState == empty" and "command:stm8.newProject" in w["contents"] for w in welcome)
