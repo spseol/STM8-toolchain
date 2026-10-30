@@ -36,3 +36,14 @@ vscode:
 		echo "None of '$(IDES)' found in PATH. Install $(VSIX) by hand: Extensions view > ... > Install from VSIX."; \
 		exit 1; \
 	fi
+
+.PHONY: upgrade
+
+STM8_TOOLCHAIN_URL ?= https://gitlab.com/spseol/mit-no/STM8S-toolchain.git
+UPGRADE_ARGS ?=
+
+# update .make/ and the Makefile from the toolchain repository, run by the fetched upgrade.py;
+# the script goes through -c, so stdin stays free for its questions
+upgrade:
+	git fetch '$(STM8_TOOLCHAIN_URL)' main
+	@$(PYTHON) -c "$$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD $(UPGRADE_ARGS)

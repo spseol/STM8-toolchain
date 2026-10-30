@@ -4,7 +4,7 @@ import shutil
 import tarfile
 from pathlib import Path
 
-from conftest import COPY_IGNORE, ROOT, dap_info, project_copy, run_make
+from conftest import COPY_IGNORE, ROOT, dap_info, old_project, project_copy, run_make, toolchain_remote
 
 KEYS = {"device", "deviceFlash", "elf", "sfr", "openocd", "openocdLog", "gdbTarget"}
 
@@ -66,3 +66,21 @@ def test_debug_files_downloads_spl_when_missing(tmp_path):
     info = dap_info(cwd=project)
     assert Path(info["elf"]).is_file()
     assert Path(info["sfr"]).is_file()
+
+
+def test_make_upgrade_runs_script_from_fetched_ref(tmp_path):
+    remote = toolchain_remote(tmp_path / "remote")
+    project = old_project(tmp_path / "proj", with_include=True)
+    proc = run_make(["upgrade", f"STM8_TOOLCHAIN_URL=file://{remote}", "UPGRADE_ARGS=--switch no"], cwd=project)
+    assert proc.returncode == 0, proc.stderr
+    assert "Updated .make/" in proc.stdout
+    assert "-include .make/vscode.mk" in (project / "Makefile").read_text()
+
+
+def test_make_upgrade_refusal_fails_make(tmp_path):
+    remote = toolchain_remote(tmp_path / "remote")
+    project = old_project(tmp_path / "proj", with_include=True, dirty=True)
+    proc = run_make(["upgrade", f"STM8_TOOLCHAIN_URL=file://{remote}", "UPGRADE_ARGS=--switch no"], cwd=project)
+    assert proc.returncode != 0
+    assert "uncommitted" in proc.stderr
+    assert re.search(r"(Error|Chyba) 1", proc.stderr), proc.stderr  # make localizes its message
