@@ -1,3 +1,5 @@
+<p align="center"><img src=".make/vscode/media/banner.png" alt="STM8S toolchain" width="480"></p>
+
 # Open-Source STM8S  toolchain (SDCC + Makefile)
 
 **🇨🇿 Česká verze** | [🇬🇧 English](README.md)

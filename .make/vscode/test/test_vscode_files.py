@@ -301,3 +301,43 @@ def test_new_project_media_are_in_the_vsix(tmp_path):
     archive = zipfile.ZipFile(pack(tmp_path / "x.vsix"))
     assert archive.read("extension/media/README.project.md").decode("utf-8") == template
     assert archive.read("extension/media/schema.png") == png
+
+
+# --- logo ----------------------------------------------------------------------------------
+
+
+def _png_header(path):
+    data = path.read_bytes()
+    assert data.startswith(b"\x89PNG\r\n\x1a\n") and data[12:16] == b"IHDR", path
+    width, height = struct.unpack(">II", data[16:24])
+    return width, height, data[25], len(data)
+
+
+def test_logo_files_exist():
+    media = VSCODE / "media"
+    for name in ("icon.svg", "banner.svg"):
+        ElementTree.parse(media / name)
+    assert _png_header(media / "icon.png")[:2] == (256, 256)
+    width, height, _, _ = _png_header(media / "banner.png")
+    assert 400 <= width <= 1000 and height > 0
+
+
+def test_icon_png_is_not_the_placeholder():
+    _, _, colour_type, size = _png_header(VSCODE / "media" / "icon.png")
+    assert colour_type == 6  # RGBA, průhledné pozadí
+    assert size > 2000
+
+
+def test_root_readmes_show_the_banner():
+    banner = ".make/vscode/media/banner.png"
+    assert (ROOT / banner).is_file()
+    for name in ("README.md", "README.cs.md"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        assert f'src="{banner}"' in text, name
+        assert "https://" not in re.search(r"<img[^>]+banner\.png[^>]*>", text).group(0)
+
+
+def test_icon_in_the_vsix_equals_the_file(tmp_path):
+    archive = zipfile.ZipFile(pack(tmp_path / "x.vsix"))
+    assert archive.read("extension/media/icon.png") == (VSCODE / "media" / "icon.png").read_bytes()
+    assert "extension/media/icon.svg" in archive.namelist()
