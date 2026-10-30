@@ -1,7 +1,11 @@
 # Files of the toolchain that a student's project does not need (extension tests,
 # release scripts, design notes). One path per line, relative to the project root,
 # no globs; an entry covers the path and everything below it. Blank lines and lines
-# starting with # are ignored, as are absolute paths and paths with a .. segment.
+# starting with # are ignored. An entry is also ignored (not an error) if it is
+# absolute, has a drive form (C:x) or a backslash, has a .. segment or a segment
+# of only dots/spaces, or starts with .git (case-insensitive, trailing dots/spaces
+# stripped: .GIT, .git. and .git/hooks; not .gitignore or a/.git). A lone . segment
+# is dropped (./x means x).
 #
 # Read by: STM8: New Project (.make/vscode/src/newproject.js), the stm8newproject
 # script (both delete the entries from the fresh clone before the first commit)
