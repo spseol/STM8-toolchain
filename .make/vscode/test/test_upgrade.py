@@ -242,6 +242,29 @@ def test_upgrade_untracked_launch_json_gets_bak(tmp_path):
     assert report.backup == str(backup)
 
 
+def test_upgrade_never_overwrites_existing_launch_backup(tmp_path):
+    project = prepared(tmp_path)
+    (project / ".vscode" / ".gitignore").write_text("*\n")
+    git(project, "rm", "-q", "--cached", ".vscode/launch.json")
+    git(project, "add", "-f", ".vscode/.gitignore")
+    git(project, "commit", "-q", "-m", "untrack launch.json")
+    first = upgrade.upgrade(project, "FETCH_HEAD")
+    commit_all(project, "upgraded")
+    # a later toolchain release changes launch.json
+    remote = tmp_path / "remote" / "toolchain-remote"
+    launch = remote / ".vscode" / "launch.json"
+    launch.write_text(launch.read_text().replace("STM8 debug", "STM8 debug v2"))
+    git(remote, "commit", "-q", "-am", "launch v2")
+    git(project, "fetch", "-q", str(remote), "main")
+    second = upgrade.upgrade(project, "FETCH_HEAD")
+    first_bak = project / ".vscode" / "launch.json.bak"
+    assert first.backup == str(first_bak)
+    assert "cppdbg" in first_bak.read_text()
+    assert second.backup == str(project / ".vscode" / "launch.json.bak.1")
+    assert "STM8 debug" in (project / ".vscode" / "launch.json.bak.1").read_text()
+    assert [c["name"] for c in launch_configs(project)] == ["STM8 debug v2"]
+
+
 def test_upgrade_adds_launch_json_when_missing(tmp_path):
     project = prepared(tmp_path)
     git(project, "rm", "-q", ".vscode/launch.json")

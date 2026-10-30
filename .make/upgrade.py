@@ -206,6 +206,21 @@ def _update_gitignore(project, ref, report):
         path.write_text(text + prefix + "\n".join(report.gitignore_added) + "\n")
 
 
+def _save_backup(path):
+    """Copy PATH to PATH.bak, PATH.bak.1, ... without overwriting anything; the first
+    existing backup with the same content is reused. Returns the backup path."""
+    data = path.read_bytes()
+    index = 0
+    while True:
+        backup = path.with_name(path.name + (".bak" if index == 0 else f".bak.{index}"))
+        if not backup.exists():
+            backup.write_bytes(data)
+            return backup
+        if backup.is_file() and backup.read_bytes() == data:
+            return backup
+        index += 1
+
+
 def _update_launch(project, ref, report):
     """Replace .vscode/launch.json by the toolchain one; save an untracked original as .bak."""
     new = _show(project, ref, ".vscode/launch.json")
@@ -217,9 +232,7 @@ def _update_launch(project, ref, report):
     if path.is_file():
         tracked = _git_bytes(project, "ls-files", "--error-unmatch", ".vscode/launch.json", check=False)[0] == 0
         if not tracked:
-            backup = path.with_name("launch.json.bak")
-            backup.write_bytes(path.read_bytes())
-            report.backup = str(backup)
+            report.backup = str(_save_backup(path))
     report.launch = "replaced" if path.is_file() else "added"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(new)
