@@ -1,15 +1,36 @@
 {
   "name": "stm8-toolchain",
   "displayName": "STM8 Toolchain Debugger",
-  "description": "Debug STM8S projects of the STM8S toolchain (SDCC, OpenOCD, stm8-gdb): F5, stepping, variables and peripheral registers.",
-  "version": "0.1.0",
+  "description": "Build, flash and debug STM8S microcontroller projects with SDCC, OpenOCD and stm8-gdb: create a project, press F5, step through code, inspect variables and peripheral registers.",
+  "version": "0.2.0",
   "publisher": "spseol",
   "license": "GPL-3.0-or-later",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/spseol/STM8S-toolchain.git"
+  },
+  "homepage": "https://github.com/spseol/STM8S-toolchain#readme",
+  "bugs": {
+    "url": "https://github.com/spseol/STM8S-toolchain/issues"
+  },
+  "keywords": [
+    "stm8",
+    "stm8s",
+    "sdcc",
+    "openocd",
+    "gdb",
+    "debugger",
+    "embedded",
+    "microcontroller",
+    "spl"
+  ],
   "engines": {
     "vscode": "^1.80.0"
   },
   "categories": [
-    "Debuggers"
+    "Debuggers",
+    "Education"
   ],
   "main": "./extension.js",
   "activationEvents": [

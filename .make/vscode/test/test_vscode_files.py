@@ -1,6 +1,7 @@
 import json
 import re
 import shutil
+import struct
 import subprocess
 import zipfile
 from pathlib import Path
@@ -38,7 +39,73 @@ def test_vsix_excludes_dev_files(tmp_path):
     names = zipfile.ZipFile(pack(tmp_path / "x.vsix")).namelist()
     for name in names:
         assert not name.startswith(("extension/test/", "extension/bin/")), name
-        assert Path(name).name not in {"DESIGN.md", "PLAN.md", "SPIKE.md", "pack.py", "dap_info.py", "pytest.ini"}, name
+        assert Path(name).name not in {"DESIGN.md", "PLAN.md", "SPIKE.md", "RELEASING.md", "release.py", "pack.py",
+                                         "dap_info.py", "pytest.ini"}, name
+    assert "extension/CHANGELOG.md" in names
+
+
+def manifest_of(path):
+    archive = zipfile.ZipFile(path)
+    return archive, ElementTree.fromstring(archive.read("extension.vsixmanifest"))
+
+
+NS = {"v": "http://schemas.microsoft.com/developer/vsx-schema/2011"}
+
+
+def test_vsix_has_marketplace_assets(tmp_path):
+    archive, root = manifest_of(pack(tmp_path / "x.vsix"))
+    names = set(archive.namelist())
+    assert archive.read("extension/LICENSE.txt") == (ROOT / "LICENSE").read_bytes()
+    for name in ("extension/CHANGELOG.md", "extension/README.md", "extension/media/icon.png",
+                 "extension/media/README.project.md", "extension/media/schema.png"):
+        assert name in names, name
+    assets = {a.get("Type"): a.get("Path") for a in root.findall("v:Assets/v:Asset", NS)}
+    assert assets["Microsoft.VisualStudio.Services.Icons.Default"] == "extension/media/icon.png"
+    assert assets["Microsoft.VisualStudio.Services.Content.Details"] == "extension/README.md"
+    assert assets["Microsoft.VisualStudio.Services.Content.Changelog"] == "extension/CHANGELOG.md"
+    assert assets["Microsoft.VisualStudio.Services.Content.License"] == "extension/LICENSE.txt"
+    assert assets["Microsoft.VisualStudio.Code.Manifest"] == "extension/package.json"
+    for asset in root.findall("v:Assets/v:Asset", NS):
+        assert asset.get("Addressable") == "true"
+        assert asset.get("Path") in names
+    package = json.loads((VSCODE / "package.json").read_text())
+    meta = root.find("v:Metadata", NS)
+    assert meta.find("v:Categories", NS).text == "Debuggers,Education"
+    assert meta.find("v:Tags", NS).text == ",".join(package["keywords"])
+    props = {p.get("Id"): p.get("Value") for p in meta.findall("v:Properties/v:Property", NS)}
+    repo = package["repository"]["url"].removesuffix(".git")
+    assert props["Microsoft.VisualStudio.Services.Links.Source"] == repo
+    assert props["Microsoft.VisualStudio.Services.Links.Getstarted"] == repo
+    assert props["Microsoft.VisualStudio.Services.Links.Support"] == package["bugs"]["url"]
+    assert props["Microsoft.VisualStudio.Services.Links.Learn"] == package["homepage"]
+    assert "[Content_Types].xml" in names and ".txt" in archive.read("[Content_Types].xml").decode()
+
+
+def test_icon_is_png_at_least_128():
+    data = (VSCODE / "media" / "icon.png").read_bytes()
+    assert data.startswith(b"\x89PNG\r\n\x1a\n") and data[12:16] == b"IHDR"
+    width, height = struct.unpack(">II", data[16:24])
+    assert width >= 128 and height >= 128
+
+
+def test_readme_images_are_https_and_not_svg():
+    text = (VSCODE / "README.md").read_text(encoding="utf-8")
+    urls = re.findall(r"!\[[^\]]*\]\(([^)\s]+)", text) + re.findall(r"<img[^>]+src=[\"']([^\"']+)", text)
+    for url in urls:
+        assert url.startswith("https://"), url
+        assert not url.split("?")[0].lower().endswith(".svg"), url
+
+
+def test_package_json_marketplace_fields():
+    package = json.loads((VSCODE / "package.json").read_text())
+    assert (VSCODE / package["icon"]).is_file() and package["icon"].endswith(".png")
+    assert package["repository"] == {"type": "git", "url": "https://github.com/spseol/STM8S-toolchain.git"}
+    assert package["bugs"]["url"] == "https://github.com/spseol/STM8S-toolchain/issues"
+    assert package["homepage"].startswith("https://github.com/spseol/STM8S-toolchain")
+    assert {"stm8", "sdcc"} <= set(package["keywords"])
+    assert package["categories"] == ["Debuggers", "Education"]
+    top = re.search(r"^## (\d+\.\d+\.\d+)\b", (VSCODE / "CHANGELOG.md").read_text(encoding="utf-8"), re.M).group(1)
+    assert package["version"] == top
 
 
 def test_manifest_identity(tmp_path):
