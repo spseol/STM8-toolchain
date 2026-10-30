@@ -8,8 +8,10 @@ so nothing is ever published, and nothing leaves the temp directory.
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -62,8 +64,8 @@ class Runner:
         for cmd in self.commands():
             if cmd[0] == "git":
                 continue
-            names.append("pytest" if cmd[:3] == ["python3", "-m", "pytest"] else
-                         "pack" if cmd[0] == "python3" and cmd[1].endswith("pack.py") else cmd[0])
+            names.append("pytest" if cmd[:3] == [sys.executable, "-m", "pytest"] else
+                         "pack" if cmd[0] == sys.executable and cmd[1].endswith("pack.py") else cmd[0])
         return names
 
 
@@ -136,6 +138,16 @@ def test_refuses_when_behind_origin(setup, capsys):
     assert_refused(setup, capsys, "behind")
 
 
+def test_refuses_detached_head(setup, capsys):
+    git(setup.repo, "checkout", "-q", "--detach")
+    assert_refused(setup, capsys, "main", "HEAD")
+
+
+def test_refuses_when_fetch_fails(setup, capsys):
+    shutil.rmtree(setup.origin)
+    assert_refused(setup, capsys, "fetch")
+
+
 def test_refuses_missing_remote(setup, capsys):
     git(setup.repo, "remote", "remove", "github")
     assert_refused(setup, capsys, "github")
@@ -144,7 +156,7 @@ def test_refuses_missing_remote(setup, capsys):
 def test_refuses_existing_tag(setup, capsys):
     git(setup.repo, "tag", TAG)
     assert do_release(setup) == 1
-    assert "npx" not in setup.runner.programs()
+    assert not {"pytest", "node", "pack", "npx"} & set(setup.runner.programs())
     assert tags(setup.repo) == [TAG]
     assert TAG in capsys.readouterr().err
 
@@ -176,9 +188,9 @@ def test_dry_run_publishes_nothing(setup, capsys):
 def test_test_commands(setup):
     assert do_release(setup, dry_run=True) == 0
     commands = setup.runner.commands()
-    assert ["python3", "-m", "pytest", ".make/vscode"] in commands
+    assert [sys.executable, "-m", "pytest", ".make/vscode"] in commands
     assert ["node", "--test", ".make/vscode/test/a.test.js", ".make/vscode/test/b.test.js"] in commands
-    pack = next(cmd for cmd in commands if cmd[0] == "python3" and cmd[1].endswith("pack.py"))
+    pack = next(cmd for cmd in commands if cmd[0] == sys.executable and cmd[1].endswith("pack.py"))
     assert pack[1:] == [".make/vscode/pack.py", ".make/vscode/stm8-toolchain.vsix"]
 
 
@@ -188,9 +200,10 @@ def test_full_release_order(setup, capsys):
     commands = setup.runner.commands()
     ordered = [cmd for cmd in commands if cmd[0] != "git" or cmd[1] in ("tag", "push")]
     assert [cmd[0] if cmd[0] != "git" else " ".join(cmd[:3]) for cmd in ordered] == [
-        "python3", "node", "python3", "npx", f"git tag -a", "git push origin", "git push github", "xdg-open"]
-    assert ["python3", "-m", "pytest", ".make/vscode"] == ordered[0]
-    assert ordered[3] == ["npx", "ovsx", "publish", ".make/vscode/stm8-toolchain.vsix"]
+        sys.executable, "node", sys.executable, "npx", f"git tag -a", "git push origin", "git push github", "xdg-open"]
+    assert [sys.executable, "-m", "pytest", ".make/vscode"] == ordered[0]
+    assert ordered[3] == ["npx", "--yes", f"ovsx@{release_py.OVSX_VERSION}", "publish",
+                          ".make/vscode/stm8-toolchain.vsix"]
     assert ordered[4][:4] == ["git", "tag", "-a", TAG]
     assert ordered[5] == ["git", "push", "origin", "main", TAG]
     assert ordered[6] == ["git", "push", "github", "main", TAG]
@@ -207,6 +220,40 @@ def test_full_release_order(setup, capsys):
     assert TOKEN not in captured.out + captured.err
     assert "stm8-toolchain.vsix" in captured.out
     assert "2026-12-01" in captured.out
+
+
+def test_ovsx_is_pinned_and_non_interactive(setup):
+    assert do_release(setup) == 0
+    npx = next(cmd for cmd, _ in setup.runner.calls if cmd[0] == "npx")
+    assert npx[:2] == ["npx", "--yes"]
+    assert re.fullmatch(r"ovsx@\d+\.\d+\.\d+", npx[2])
+
+
+def test_tag_failure_after_publish_says_how_to_finish(setup, capsys):
+    # the tag already exists in the repo by the time of the tagging, so `git tag` fails
+    setup.runner.hooks["npx"] = lambda: git(setup.repo, "tag", TAG)
+    assert do_release(setup) == 1
+    err = capsys.readouterr().err
+    assert "PUBLISHED" in err
+    assert f"git tag -a {TAG}" in err
+    assert f"git push origin main {TAG}" in err and f"git push github main {TAG}" in err
+
+
+@pytest.mark.parametrize("error", [KeyboardInterrupt(), RuntimeError("boom")])
+def test_unexpected_error_after_publish_still_says_published(setup, capsys, error):
+    original = setup.runner.__call__
+
+    def failing(cmd, **kwargs):
+        if cmd[:2] == ["git", "push"]:
+            raise error
+        return original(cmd, **kwargs)
+
+    result = release_py.release(setup.repo, run=failing, env=setup.env, token_file=setup.token_file)
+    assert result == 1
+    err = capsys.readouterr().err
+    assert "PUBLISHED" in err
+    assert f"git push origin main {TAG}" in err and f"git push github main {TAG}" in err
+    assert TOKEN not in err
 
 
 def test_xdg_open_failure_is_only_a_warning(setup, capsys):

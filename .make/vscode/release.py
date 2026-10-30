@@ -20,6 +20,9 @@ from urllib.parse import quote
 BRANCH = "main"
 REMOTES = ("origin", "github")
 TOKEN_VAR = "OVSX_PAT"
+# pinned: the token is handed to whatever npx resolves, so a new ovsx is adopted on purpose
+# (how: .make/vscode/RELEASING.md)
+OVSX_VERSION = "1.3.0"
 TOKEN_FILE = Path.home() / ".config" / "stm8-toolchain" / "ovsx-token"
 EXTENSION_DIR = Path(".make") / "vscode"  # relative to the repository root
 VSIX = EXTENSION_DIR / "stm8-toolchain.vsix"
@@ -120,7 +123,7 @@ class Releaser:
 
     def run_tests(self):
         node_tests = sorted((self.root / EXTENSION_DIR / "test").glob("*.test.js"))
-        commands = [["python3", "-m", "pytest", EXTENSION_DIR.as_posix()],
+        commands = [[sys.executable, "-m", "pytest", EXTENSION_DIR.as_posix()],
                     ["node", "--test", *(path.relative_to(self.root).as_posix() for path in node_tests)]]
         for cmd in commands:
             print("+", " ".join(cmd))
@@ -130,7 +133,7 @@ class Releaser:
                 raise Refused(f"Tests failed ({cmd[0]}), nothing was published.")
 
     def pack(self):
-        cmd = ["python3", (EXTENSION_DIR / "pack.py").as_posix(), VSIX.as_posix()]
+        cmd = [sys.executable, (EXTENSION_DIR / "pack.py").as_posix(), VSIX.as_posix()]
         print("+", " ".join(cmd))
         result = self.call(cmd)
         if result.returncode != 0:
@@ -140,7 +143,7 @@ class Releaser:
     # --- step 6 to 8: publish, tag, push, Microsoft ---------------------------------------------
 
     def publish(self):
-        cmd = ["npx", "ovsx", "publish", VSIX.as_posix()]
+        cmd = ["npx", "--yes", f"ovsx@{OVSX_VERSION}", "publish", VSIX.as_posix()]
         print("+", " ".join(cmd))
         env = dict(self.env)
         env[TOKEN_VAR] = self.token  # the only place where the token leaves this process
@@ -149,12 +152,19 @@ class Releaser:
         if result.returncode != 0:
             raise Refused("Publishing to Open VSX failed. No tag was created and nothing was pushed.")
 
+    @staticmethod
+    def finish_by_hand(version, tag, remotes, with_tag=False):
+        """The commands that complete a release whose publish already happened."""
+        lines = [f"  git tag -a {tag} -m 'STM8 Toolchain extension {version}'"] if with_tag else []
+        lines += [f"  git push {remote} {BRANCH} {tag}" for remote in remotes]
+        return "\n".join(lines)
+
     def tag_and_push(self, version, tag):
         result = self.git("tag", "-a", tag, "-m", f"STM8 Toolchain extension {version}")
         if result.returncode != 0:
             self.show(result)
             raise Refused(f"The extension is already PUBLISHED on Open VSX, but creating the tag {tag} failed. "
-                          f"Create it by hand: git tag -a {tag} -m 'STM8 Toolchain extension {version}'")
+                          f"Finish by hand:\n{self.finish_by_hand(version, tag, REMOTES, with_tag=True)}")
         failed = []
         for remote in REMOTES:
             result = self.git("push", remote, BRANCH, tag)
@@ -162,9 +172,8 @@ class Releaser:
                 self.show(result)
                 failed.append(remote)
         if failed:
-            retry = "\n".join(f"  git push {remote} {BRANCH} {tag}" for remote in failed)
             raise Refused(f"The extension is already PUBLISHED on Open VSX and tagged, but the push to "
-                          f"{' and '.join(failed)} failed. Retry:\n{retry}")
+                          f"{' and '.join(failed)} failed. Retry:\n{self.finish_by_hand(version, tag, failed)}")
 
     def finish(self):
         print(f"VSIX: {(self.root / VSIX).resolve()}")
@@ -190,8 +199,17 @@ def release(root, *, dry_run=False, run=subprocess.run, env=os.environ, token_fi
             print("Dry run: nothing was published or tagged.")
             return 0
         releaser.publish()
-        releaser.tag_and_push(version, tag)
-        releaser.finish()
+        try:
+            releaser.tag_and_push(version, tag)
+            releaser.finish()
+        except Refused:
+            raise
+        except BaseException as error:  # KeyboardInterrupt, a decoding error, ...
+            print(redact(f"Stopped by {type(error).__name__}: {error}\nThe extension is already PUBLISHED on "
+                         f"Open VSX. Finish by hand (skip the tag command when the tag exists):\n"
+                         f"{releaser.finish_by_hand(version, tag, REMOTES, with_tag=True)}", releaser.token),
+                  file=sys.stderr)
+            return 1
     except Refused as refusal:
         print(redact(str(refusal), releaser.token), file=sys.stderr)
         return 1
