@@ -37,6 +37,13 @@ vscode:
 		exit 1; \
 	fi
 
+.PHONY: vscode-release
+
+# publish the extension on Open VSX, tag and push it, then prepare the upload to Microsoft;
+# DRY_RUN=1 only checks, tests and packs (see .make/vscode/RELEASING.md)
+vscode-release:
+	$(PYTHON) .make/vscode/release.py $(if $(DRY_RUN),--dry-run)
+
 .PHONY: upgrade
 
 STM8_TOOLCHAIN_URL ?= https://gitlab.com/spseol/mit-no/STM8S-toolchain.git
