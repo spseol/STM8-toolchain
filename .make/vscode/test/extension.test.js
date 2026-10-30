@@ -9,7 +9,7 @@ const { PassThrough } = require('node:stream');
 
 // extension.js needs the `vscode` module, which only exists inside the editor: a small fake.
 function load() {
-  const seen = { providers: {}, factories: {}, trackers: {}, commands: {}, views: {}, panels: [], messages: [], executed: [], opened: [], shown: [] };
+  const seen = { providers: {}, factories: {}, trackers: {}, commands: {}, views: {}, panels: [], messages: [], executed: [], opened: [], shown: [], updates: [], picks: [], dialogs: [], inputs: [], projectsFolder: '' };
   class EventEmitter {
     constructor() {
       this.listeners = [];
@@ -52,11 +52,12 @@ function load() {
       },
       createStatusBarItem: () => ({ show() {}, dispose() {} }),
       createTerminal: () => ({ show() {}, sendText() {}, dispose() {} }),
-      showQuickPick: async () => undefined,
+      showQuickPick: async (items, options) => { seen.picks.push([items, options]); return seen.pick ? seen.pick(items) : undefined; },
+      showOpenDialog: async (options) => { seen.dialogs.push(options); return seen.dialogResult; },
       showWarningMessage: async (...args) => { seen.messages.push(['warning', ...args]); return seen.warningChoice; },
       showTextDocument: async (doc) => { seen.shown.push(doc); },
       withProgress: async (options, task) => { seen.progress = options; return task(); },
-      showInputBox: async () => seen.inputText,
+      showInputBox: async (options) => { seen.inputs.push(options); return seen.inputText; },
       createWebviewPanel: (id, title, column, options) => {
         const panel = {
           id, title, options, handlers: {}, webview: { html: '' }, disposed: false,
@@ -72,9 +73,17 @@ function load() {
       createOutputChannel: () => ({ append() {}, dispose() {} }),
     },
     ProgressLocation: { Notification: 15 },
+    ConfigurationTarget: { Global: 1 },
+    Uri: { file: (fsPath) => ({ fsPath }) },
     workspace: {
       workspaceFolders: [{ uri: { fsPath: '/proj' } }],
-      getConfiguration: (section) => ({ get: (key) => (section === 'stm8' && key === 'toolchainUrl' ? 'https://example.org/t.git' : undefined) }),
+      getConfiguration: (section) => ({
+        get: (key) => {
+          if (section !== 'stm8') return undefined;
+          return { toolchainUrl: 'https://example.org/t.git', projectsFolder: seen.projectsFolder }[key];
+        },
+        update: async (key, value, target) => { seen.updates.push([section, key, value, target]); if (key === 'projectsFolder') seen.projectsFolder = value; },
+      }),
       openTextDocument: async (file) => { seen.opened.push(file); return { file }; },
     },
     EventEmitter,
@@ -85,9 +94,9 @@ function load() {
     return request === 'vscode' ? vscode : originalLoad.call(this, request, ...rest);
   };
   try {
-    for (const name of ['../extension', '../src/project', '../src/upgrade']) delete require.cache[require.resolve(name)]; // fresh, so replaced functions do not leak between tests
+    for (const name of ['../extension', '../src/project', '../src/upgrade', '../src/newproject']) delete require.cache[require.resolve(name)]; // fresh, so replaced functions do not leak between tests
     return {
-      extension: require('../extension'), project: require('../src/project'), upgrade: require('../src/upgrade'), seen, vscode,
+      extension: require('../extension'), project: require('../src/project'), upgrade: require('../src/upgrade'), newproject: require('../src/newproject'), seen, vscode,
     };
   } finally {
     Module._load = originalLoad;
@@ -96,6 +105,7 @@ function load() {
 
 const context = (stored = {}) => ({
   subscriptions: [],
+  extensionPath: '/ext',
   extension: { packageJSON: { version: '0.1.0' } },
   workspaceState: { get: (key) => stored[key], update: async (key, value) => { stored[key] = value; } },
 });
@@ -610,4 +620,127 @@ test('offer_dont_ask_again_is_remembered', async () => {
   const { stored } = offering({ choice: "Don't ask again" });
   await flush();
   assert.strictEqual(stored['stm8.upgrade.dismissed'], true);
+});
+
+// --- New Project ------------------------------------------------------------------------------
+
+/** New Project with createProject replaced: `calls` collects its arguments. */
+function newProject({ created = { dir: '/projects/lab', warnings: [] }, failure } = {}) {
+  const loaded = load();
+  loaded.project.versionNotice = () => null;
+  const calls = [];
+  loaded.newproject.createProject = async (options) => {
+    calls.push(options);
+    if (failure) throw failure;
+    return created;
+  };
+  loaded.extension.activate(context());
+  return { ...loaded, calls };
+}
+
+test('new_project_command_is_registered', () => {
+  const { seen } = newProject();
+  assert.strictEqual(typeof seen.commands['stm8.newProject'], 'function');
+});
+
+test('first_new_project_asks_for_the_folder_stores_it_asks_for_the_name_and_opens_the_project', async () => {
+  const { seen, calls, vscode } = newProject();
+  vscode.workspace.workspaceFolders = undefined;
+  seen.dialogResult = [{ fsPath: '/projects' }];
+  seen.inputText = 'lab';
+  await seen.commands['stm8.newProject']();
+  assert.deepStrictEqual(seen.dialogs, [{
+    canSelectFolders: true, canSelectFiles: false, canSelectMany: false,
+    openLabel: 'Use as projects folder', title: 'Folder for your STM8 projects (they share ../SPLSPL)',
+  }]);
+  assert.deepStrictEqual(seen.updates, [['stm8', 'projectsFolder', '/projects', 1]]);
+  assert.deepStrictEqual(seen.picks, []);
+  assert.strictEqual(seen.inputs.length, 1);
+  assert.deepStrictEqual(calls, [{ url: 'https://example.org/t.git', parent: '/projects', name: 'lab', mediaDir: path.join('/ext', 'media') }]);
+  assert.strictEqual(seen.progress.title, 'Creating project lab…');
+  assert.deepStrictEqual(seen.executed, [['vscode.openFolder', { fsPath: '/projects/lab' }, { forceNewWindow: false }]]); // empty window: reused
+});
+
+test('new_project_opens_a_new_window_when_a_folder_is_open', async () => {
+  const { seen } = newProject(); // the fake has a workspace folder
+  seen.projectsFolder = '/projects';
+  seen.pick = (items) => items[0];
+  seen.inputText = 'lab';
+  await seen.commands['stm8.newProject']();
+  assert.deepStrictEqual(seen.executed, [['vscode.openFolder', { fsPath: '/projects/lab' }, { forceNewWindow: true }]]);
+});
+
+test('later_new_project_offers_the_saved_folder_and_another_one', async () => {
+  const { seen, calls } = newProject();
+  seen.projectsFolder = '/projects';
+  seen.pick = (items) => items[0];
+  seen.inputText = 'lab';
+  await seen.commands['stm8.newProject']();
+  assert.deepStrictEqual(seen.picks[0][0].map((item) => item.label), ['Create in /projects', 'Choose another folder…']);
+  assert.deepStrictEqual(seen.dialogs, []);
+  assert.deepStrictEqual(seen.updates, []);
+  assert.strictEqual(calls[0].parent, '/projects');
+});
+
+test('choosing_another_folder_stores_it', async () => {
+  const { seen, calls } = newProject();
+  seen.projectsFolder = '/projects';
+  seen.pick = (items) => items[1];
+  seen.dialogResult = [{ fsPath: '/other' }];
+  seen.inputText = 'lab';
+  await seen.commands['stm8.newProject']();
+  assert.deepStrictEqual(seen.updates, [['stm8', 'projectsFolder', '/other', 1]]);
+  assert.strictEqual(calls[0].parent, '/other');
+});
+
+test('name_is_validated_while_typing', async () => {
+  const { seen } = newProject();
+  seen.projectsFolder = '/projects';
+  seen.pick = (items) => items[0];
+  await seen.commands['stm8.newProject']();
+  const { validateInput } = seen.inputs[0];
+  assert.match(validateInput('a/b'), /must not contain/);
+  assert.strictEqual(validateInput('lab'), undefined);
+});
+
+test('cancelling_at_any_step_does_nothing', async () => {
+  for (const stage of ['dialog', 'pick', 'name']) {
+    const { seen, calls } = newProject();
+    if (stage === 'dialog') {
+      seen.dialogResult = undefined;
+    } else {
+      seen.projectsFolder = '/projects';
+      seen.pick = stage === 'pick' ? () => undefined : (items) => items[0];
+      seen.inputText = undefined;
+    }
+    await seen.commands['stm8.newProject']();
+    assert.deepStrictEqual(calls, [], stage);
+    assert.deepStrictEqual(seen.executed, [], stage);
+    assert.deepStrictEqual(seen.messages, [], stage);
+    assert.deepStrictEqual(seen.updates, [], stage);
+  }
+});
+
+test('new_project_warnings_are_shown_once_before_opening', async () => {
+  const { seen } = newProject({ created: { dir: '/projects/lab', warnings: ['one', 'two'] } });
+  seen.projectsFolder = '/projects';
+  seen.pick = (items) => items[0];
+  seen.inputText = 'lab';
+  await seen.commands['stm8.newProject']();
+  const warnings = seen.messages.filter(([kind]) => kind === 'warning');
+  assert.strictEqual(warnings.length, 1);
+  assert.match(warnings[0][1], /one/);
+  assert.match(warnings[0][1], /two/);
+  assert.strictEqual(seen.executed.length, 1);
+});
+
+test('new_project_failure_is_shown_and_nothing_is_opened', async () => {
+  const { seen, project } = newProject({ failure: new Error('Cannot download the toolchain from X: no network') });
+  seen.projectsFolder = '/projects';
+  seen.pick = (items) => items[0];
+  seen.inputText = 'lab';
+  await seen.commands['stm8.newProject']();
+  assert.deepStrictEqual(seen.messages, [['error', 'Cannot download the toolchain from X: no network']]);
+  assert.deepStrictEqual(seen.executed, []);
+  assert.ok(project);
 });

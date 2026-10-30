@@ -9,6 +9,7 @@ const { renderRegisterHtml } = require('./src/regview');
 const { registerStatusBar } = require('./src/statusbar');
 const project = require('./src/project'); // called through the object, so the tests can replace functions
 const upgrade = require('./src/upgrade');
+const newproject = require('./src/newproject');
 
 const TYPE = 'stm8';
 const RESUMING = new Set(['continue', 'next', 'stepIn', 'stepOut', 'stepBack', 'reverseContinue']);
@@ -237,6 +238,9 @@ function activate(context) {
     vscode.commands.registerCommand('stm8.sfr.readRegister', (node) => guarded(() => tree.readRegister(node))),
     vscode.commands.registerCommand('stm8.sfr.openRegister', openRegister),
     vscode.commands.registerCommand('stm8.updateToolchain', () => guarded(updateToolchain)),
+    vscode.commands.registerCommand('stm8.newProject', () => guarded(
+      () => newproject.newProjectFlow(vscode, { createProject: (options) => newproject.createProject(options), context }),
+    )),
   );
 
   context.subscriptions.push(registerStatusBar(vscode, project, {

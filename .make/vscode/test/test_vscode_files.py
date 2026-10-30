@@ -188,3 +188,25 @@ def test_fallback_side_effects_match_python():
     py = gdb_batch(["python import json; print(json.dumps({k: sorted(v) for k, v in READ_SIDE_EFFECT.items()}))"]).stdout
     normalize = lambda text: {k: sorted(v) for k, v in json.loads(text.strip().splitlines()[-1]).items()}  # noqa: E731
     assert normalize(js) == normalize(py)
+
+
+def test_new_project_command_and_settings_are_declared():
+    package = json.loads((VSCODE / "package.json").read_text())
+    commands = {c["command"]: c for c in package["contributes"]["commands"]}
+    assert commands["stm8.newProject"]["title"] == "STM8: New Project…"
+    assert "stm8.newProject" not in {m["command"] for m in package["contributes"]["menus"]["commandPalette"]}
+    setting = package["contributes"]["configuration"]["properties"]["stm8.projectsFolder"]
+    assert (setting["type"], setting["default"], setting["scope"]) == ("string", "", "machine-overridable")
+    assert "../SPLSPL" in setting["description"]
+    welcome = package["contributes"]["viewsWelcome"]
+    assert any(w["view"] == "explorer" and w["when"] == "workbenchState == empty" and "command:stm8.newProject" in w["contents"] for w in welcome)
+
+
+def test_new_project_media_are_in_the_vsix(tmp_path):
+    template = (VSCODE / "media" / "README.project.md").read_text(encoding="utf-8")
+    assert template.startswith("# {{TITLE}}\n")
+    png = (VSCODE / "media" / "schema.png").read_bytes()
+    assert png.startswith(b"\x89PNG\r\n\x1a\n") and len(png) > 10_000
+    archive = zipfile.ZipFile(pack(tmp_path / "x.vsix"))
+    assert archive.read("extension/media/README.project.md").decode("utf-8") == template
+    assert archive.read("extension/media/schema.png") == png

@@ -69,6 +69,12 @@
           "default": "https://gitlab.com/spseol/mit-no/STM8S-toolchain.git",
           "scope": "machine-overridable",
           "description": "Git repository that STM8: Update Toolchain downloads the current toolchain (.make/) from."
+        },
+        "stm8.projectsFolder": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "description": "Folder where STM8: New Project creates your projects. Keep all projects in one folder: they share the SPL library in ../SPLSPL next to them."
         }
       }
     },
@@ -121,6 +127,10 @@
       {
         "command": "stm8.updateToolchain",
         "title": "STM8: Update Toolchain"
+      },
+      {
+        "command": "stm8.newProject",
+        "title": "STM8: New Project…"
       }
     ],
     "menus": {
@@ -164,6 +174,13 @@
           "group": "inline@3"
         }
       ]
-    }
+    },
+    "viewsWelcome": [
+      {
+        "view": "explorer",
+        "contents": "You have not opened a folder yet.\n[New STM8 Project](command:stm8.newProject)",
+        "when": "workbenchState == empty"
+      }
+    ]
   }
 }
