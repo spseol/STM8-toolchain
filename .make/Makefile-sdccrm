@@ -155,9 +155,9 @@ $(TARGET).ihx: $(PRJ_ASSMS) $(SPL_ASSMS)
 	@echo 
 
 
-$(OUTPUT_DIR)/%.asm: $(PRJ_SRC_DIR)/%.c Makefile exclude_reference $(PRJ_INCS) | $(OUTPUT_DIR)
+$(OUTPUT_DIR)/%.asm: $(PRJ_SRC_DIR)/%.c Makefile .make/exclude_reference $(PRJ_INCS) | $(OUTPUT_DIR)
 	+$(CC) $(CFLAGS) -D$(DEVICE) $(INCLUDE) -DSKIP_TRAPS=$(SKIP_TRAPS) -c $< -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
-$(OUTPUT_DIR)/%.asm: $(SPL_SRC_DIR)/%.c Makefile exclude_reference $(PRJ_INCS) | $(OUTPUT_DIR)
+$(OUTPUT_DIR)/%.asm: $(SPL_SRC_DIR)/%.c Makefile .make/exclude_reference $(PRJ_INCS) | $(OUTPUT_DIR)
 	+$(CC) $(CFLAGS) -D$(DEVICE) $(INCLUDE) -DSKIP_TRAPS=$(SKIP_TRAPS) -c $< -o $@ 2>&1 | $(PYTHON) .make/recolor.py; exit $${PIPESTATUS[0]}
 
 $(OUTPUT_DIR):

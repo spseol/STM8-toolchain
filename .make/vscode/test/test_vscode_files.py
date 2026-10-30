@@ -343,3 +343,22 @@ def test_icon_in_the_vsix_equals_the_file(tmp_path):
     archive = zipfile.ZipFile(pack(tmp_path / "x.vsix"))
     assert archive.read("extension/media/icon.png") == (VSCODE / "media" / "icon.png").read_bytes()
     assert "extension/media/icon.svg" in archive.namelist()
+
+
+# --- repository cleanup --------------------------------------------------------------------
+
+
+def test_todo_is_gone_and_exclude_reference_lives_in_make():
+    tracked = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
+    assert "TODO.md" not in tracked
+    assert not (ROOT / "TODO.md").exists()
+    assert not (ROOT / "exclude_reference").exists()
+    assert ".make/exclude_reference" in tracked
+
+
+def test_sdccrm_scripts_use_exclude_reference_in_make():
+    # exclude_reference is only ever named with its .make/ prefix
+    for name in ("Makefile-sdccrm", "asm2obj", "reference2exclude"):
+        text = (ROOT / ".make" / name).read_text()
+        assert "exclude_reference" in text, name
+        assert not re.search(r"(?<!\.make/)exclude_reference", text), name

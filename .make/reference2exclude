@@ -25,7 +25,7 @@ if [ -s $output ] && grep -P "$regular" $output; then
         echo -e "${BOLD}Please first check SPL_SOURCE in Makefile$NC" 
         echo -en "\n  Did you chack SPL_SOURCE in Makefile? All is right? O.K.\n"
     fi
-    echo -en "    Do you want add THIS into 'exclude_reference' file? [y/N] "
+    echo -en "    Do you want add THIS into '.make/exclude_reference' file? [y/N] "
     read yesno
     echo
     if [[ $yesno == 'y' ]]; then
@@ -33,10 +33,10 @@ if [ -s $output ] && grep -P "$regular" $output; then
         names=()
         while read name; do
             names+="$name"
-            if grep "^$name\$" exclude_reference >/dev/null; then
-                echo "'$name' is existing in 'exclude_reference' file." 
+            if grep "^$name\$" .make/exclude_reference >/dev/null; then
+                echo "'$name' is existing in '.make/exclude_reference' file." 
             else
-                echo $name >> exclude_reference
+                echo $name >> .make/exclude_reference
                 echo "'$name' added." 
             fi
         done < <(grep -P "$regular" $output\
