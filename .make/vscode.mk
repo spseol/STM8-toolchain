@@ -10,7 +10,15 @@ dap-info:
 		--log '$(OUTPUT_DIR_ELF)/openocd.log'
 
 # what F5 needs: the program with debug info and the peripheral registers (SFR) for gdb
+ifeq ($(wildcard ../SPLSPL),)
+# fresh project: make has read the Makefile without the SPL sources,
+# so download SPL and start make again
+debug-files:
+	$(MAKE) --no-print-directory spl
+	$(MAKE) --no-print-directory $(TARGET_ELF) $(SFR_ELF)
+else
 debug-files: $(TARGET_ELF) $(SFR_ELF)
+endif
 
 .PHONY: vscode
 

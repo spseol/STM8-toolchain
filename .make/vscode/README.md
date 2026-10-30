@@ -20,8 +20,8 @@ No Node.js or npm is needed.
 ## Use
 
 Open the project folder and press `F5` (configuration *STM8 debug*; without a `launch.json` the
-default one is used). The task `stm8: build` runs `make debug-files` first; compiler errors appear in
-the Problems panel.
+default one is used). The task `stm8: build` runs `make debug-files` first (in a new project it downloads SPL
+before that); compiler errors appear in the Problems panel.
 
 **STM8 Peripherals** (Run and Debug sidebar) lists the peripherals of the chip set in the `Makefile`.
 Expand one to read its registers at every stop. Changes since the previous stop are yellow.

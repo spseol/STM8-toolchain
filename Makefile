@@ -259,7 +259,7 @@ endif
 
 ifeq ($(wildcard $(SPLLIB_ELF)),)
 $(SPLLIB_ELF): $(SPL_OBJECTS_ELF) | $(OUTPUT_SPL_DIR_ELF)
-	@echo $(SPL_OBJECTS) > objects.list
+	@echo $(SPL_OBJECTS_ELF) > objects.list
 	$(AR) -rc $(SPLLIB_ELF) @objects.list
 	@rm objects.list
 endif

@@ -1,8 +1,10 @@
 import re
 import shlex
+import shutil
+import tarfile
 from pathlib import Path
 
-from conftest import ROOT, dap_info, project_copy, run_make
+from conftest import COPY_IGNORE, ROOT, dap_info, project_copy, run_make
 
 KEYS = {"device", "deviceFlash", "elf", "sfr", "openocd", "openocdLog", "gdbTarget"}
 
@@ -42,3 +44,25 @@ def test_debug_files_in_path_with_space_and_diacritics(tmp_path):
     assert Path(info["elf"]).is_file()
     assert Path(info["sfr"]).is_file()
     assert shlex.split(info["gdbTarget"][2:])[-1] == "2>" + info["openocdLog"]
+
+
+def test_debug_files_downloads_spl_when_missing(tmp_path):
+    """Fresh project: no ../SPLSPL yet. The first `make debug-files` has to fetch it and build."""
+    parent = tmp_path / "fresh"
+    project = parent / "proj"
+    shutil.copytree(ROOT, project, ignore=COPY_IGNORE)
+    real = ROOT.parent  # ../SPL.tgz is made here, so the test needs no network
+
+    def source_only(info):  # no libraries built from another run
+        return None if info.name.endswith((".lib", ".sdcc_ver")) else info
+
+    with tarfile.open(parent / "SPL.tgz", "w:gz") as tgz:
+        for name in ("SPL", "SPLSPL"):
+            tgz.add((real / name).resolve(), arcname=f"spl-main/{name}", filter=source_only)
+    assert not (parent / "SPLSPL").exists()
+    proc = run_make(["debug-files"], cwd=project)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert (parent / "SPLSPL" / "inc" / "stm8s.h").is_file()
+    info = dap_info(cwd=project)
+    assert Path(info["elf"]).is_file()
+    assert Path(info["sfr"]).is_file()
