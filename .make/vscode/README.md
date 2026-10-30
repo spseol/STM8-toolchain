@@ -27,7 +27,7 @@ supported or tested. You need:
 - [SDCC](http://sdcc.sourceforge.net/) (the compiler)
 - `openocd`
 - `stm8-gdb` **15 or newer**, built with Python and Debug Adapter Protocol support. It comes from the
-  STM8 binutils-gdb build: <https://stm8-binutils-gdb.sourceforge.io>
+  STM8 binutils-gdb build: <https://gitlab.com/spseol/mit-no/stm8-binutils-gdb>
 - an ST-Link (for example the one on a Nucleo-STM8S board, or a standalone ST-Link V2)
 
 No Node.js or npm is needed.

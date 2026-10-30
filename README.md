@@ -190,7 +190,7 @@ for you to resolve). It never touches `src/`, `inc/` or your README and commits 
   it can be installed together with [Git](https://git-scm.com/download/win).
 * [SDCC](http://sdcc.sourceforge.net/)
   or [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)
-* [STM8 binutils](https://stm8-binutils-gdb.sourceforge.io) (`stm8-gdb`, `stm8-ld`)
+* [STM8 binutils](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) (`stm8-gdb`, `stm8-ld`)
 * [OpenOCD](https://openocd.org/) for `flash` and `debug`
 * [cgdb](https://cgdb.github.io/) for `make debug` (gdb TUI is used without it)
   or [STVP](https://www.st.com/en/development-tools/stvp-stm8.html)
