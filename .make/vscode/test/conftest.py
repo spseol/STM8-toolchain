@@ -126,3 +126,112 @@ def json_lines(proc):
 @pytest.fixture
 def project_info():
     return dap_info()
+
+
+# --- upgrade.py fixtures ----------------------------------------------------------------------
+
+VARIANT_FILES = {"sdcc": "Makefile-sdcc", "sdcc-gas": "Makefile-sdcc-gas", "sdccrm": "Makefile-sdccrm"}
+INCLUDE_COMMENT = "# VS Code extension: dap-info, debug-files (see .make/vscode/)"
+INCLUDE_LINE = "-include .make/vscode.mk"
+
+
+def load_upgrade():
+    """The module .make/upgrade.py (it is not importable as a package, like pack.py)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("upgrade", ROOT / ".make" / "upgrade.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def git(cwd, *args):
+    """`git ARGS` in CWD with a fixed identity; returns stdout, raises on failure."""
+    env = os.environ.copy()
+    env.update(GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
+               GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com")
+    return subprocess.run(["git", *args], cwd=cwd, env=env, check=True,
+                          capture_output=True, text=True).stdout
+
+
+def _strip_include(text):
+    """TEXT without the `-include .make/vscode.mk` line and the comment line before it."""
+    lines = text.split("\n")
+    out = []
+    for line in lines:
+        if line == INCLUDE_LINE:
+            if out and out[-1] == INCLUDE_COMMENT:
+                out.pop()
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
+def _with_user_lines(text):
+    """TEXT with DEVICE_FLASH=stm8s103f3 and a user line F_CPU=8000000 in the middle."""
+    lines = []
+    for line in text.split("\n"):
+        lines.append("DEVICE_FLASH=stm8s103f3" if line.startswith("DEVICE_FLASH=") else line)
+    middle = next(i for i in range(len(lines) // 2, len(lines)) if lines[i] == "")
+    lines.insert(middle, "F_CPU=8000000")
+    return "\n".join(lines)
+
+
+def toolchain_remote(tmp_path):
+    """Git repo (branch main, one commit) with the working-tree content of every file
+    that ROOT tracks. Stands for the toolchain repository an upgrade fetches from."""
+    remote = tmp_path / "toolchain-remote"
+    remote.mkdir(parents=True)
+    for name in git(ROOT, "ls-files", "-z").split("\0"):
+        source = ROOT / name
+        if not name or not source.is_file():
+            continue
+        target = remote / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target, follow_symlinks=False)
+    git(remote, "init", "-q", "-b", "main")
+    git(remote, "add", "-A")
+    git(remote, "commit", "-q", "-m", "toolchain")
+    return remote
+
+
+def old_project(tmp_path, variant="sdcc", dirty=False, with_include=False):
+    """Git repo (single commit on main) as a student has it from an old toolchain: stale .make/,
+    root Makefile copied from a variant, own src/main.c, .vscode/launch.json.
+    DIRTY leaves an uncommitted change in Makefile; WITH_INCLUDE keeps `-include .make/vscode.mk`."""
+    project = tmp_path / "old-project"
+    project.mkdir(parents=True)
+    make_dir = project / ".make"
+    make_dir.mkdir()
+    skip = {".make/vscode/", ".make/__pycache__/"}
+    for name in git(ROOT, "ls-files", "-z", ".make").split("\0"):
+        if not name or any(name.startswith(prefix) for prefix in skip):
+            continue
+        if not with_include and name in (".make/vscode.mk", ".make/upgrade.py"):
+            continue
+        source = ROOT / name
+        if not source.is_file():
+            continue
+        (project / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, project / name, follow_symlinks=False)
+    if not with_include:
+        for name in VARIANT_FILES.values():
+            path = make_dir / name
+            path.write_text(_strip_include(path.read_text()))
+    variant_text = (make_dir / VARIANT_FILES[variant]).read_text()
+    (project / "Makefile").write_text(_with_user_lines(variant_text))
+    (project / "src").mkdir()
+    (project / "src" / "main.c").write_text("/* my own program */\nint main(void) { return 42; }\n")
+    (project / "inc").mkdir()
+    (project / "inc" / "main.h").write_text("#pragma once\n")
+    (project / ".vscode").mkdir()
+    (project / ".vscode" / "launch.json").write_text(json.dumps(
+        {"version": "0.2.0", "configurations": [{"name": "Debug", "type": "cppdbg", "request": "launch"}]},
+        indent=4) + "\n")
+    git(project, "init", "-q", "-b", "main")
+    git(project, "add", "-A")
+    git(project, "commit", "-q", "-m", "init")
+    if dirty:
+        with open(project / "Makefile", "a") as handle:
+            handle.write("# uncommitted\n")
+    return project
