@@ -39,7 +39,7 @@ function renderReadme(template, name) {
 /**
  * The entries of .make/prune.txt: one path relative to the project per line, `#` comments and blank
  * lines skipped. Never returned (the list comes from a downloaded repository): absolute paths,
- * backslashes, `..` segments and everything in .git. Same rules as in stm8newproject and upgrade.py.
+ * backslashes, `..` segments (also `...`) and everything in .git (in any case, with trailing dots or spaces). Same rules as in stm8newproject and upgrade.py.
  */
 function parsePruneList(text) {
   const entries = [];
@@ -47,7 +47,8 @@ function parsePruneList(text) {
     const line = raw.trim();
     if (!line || line.startsWith('#') || line.includes('\\') || /^([/]|[A-Za-z]:)/.test(line)) continue;
     const parts = line.split('/').filter((part) => part && part !== '.');
-    if (parts.length === 0 || parts.includes('..') || parts[0] === '.git') continue;
+    // a segment of dots and spaces is `..` on Windows, `.GIT` and `.git.` are .git on case-insensitive file systems
+    if (parts.length === 0 || parts.some((part) => /^[. ]+$/.test(part)) || parts[0].replace(/[. ]+$/, '').toLowerCase() === '.git') continue;
     entries.push(parts.join('/'));
   }
   return [...new Set(entries)];

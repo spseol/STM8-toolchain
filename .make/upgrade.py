@@ -220,7 +220,7 @@ def _write(path, data, mode=None):
 
 def prune_entries(text):
     """Entries of .make/prune.txt (TEXT): paths relative to the project, one per line, `#` comments
-    and blank lines skipped. Absolute paths, backslashes, `..` segments and .git are left out, the
+    and blank lines skipped. Absolute paths, backslashes, `..` segments and .git (in any case) are left out, the
     list comes from a downloaded repository. Same rules as in newproject.js and stm8newproject."""
     entries = []
     for raw in text.splitlines():
@@ -228,7 +228,8 @@ def prune_entries(text):
         if not line or line.startswith(("#", "/")) or "\\" in line or re.match(r"[A-Za-z]:", line):
             continue
         parts = [part for part in line.split("/") if part and part != "."]
-        if not parts or ".." in parts or parts[0] == ".git":
+        # a segment of dots and spaces is `..` on Windows, `.GIT` and `.git.` are .git on case-insensitive file systems
+        if not parts or any(re.fullmatch(r"[. ]+", part) for part in parts) or re.sub(r"[. ]+$", "", parts[0]).lower() == ".git":
             continue
         entries.append("/".join(parts))
     return list(dict.fromkeys(entries))

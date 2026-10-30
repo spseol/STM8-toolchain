@@ -300,4 +300,16 @@ test('parsePruneList', () => {
   ].join('\r\n');
   assert.deepStrictEqual(parsePruneList(text), ['a/b', 'c/d', 'e', 'f/g', 'a b/čau', 'dup']);
   assert.deepStrictEqual(parsePruneList(''), []);
+  // .git in any spelling a case-insensitive or Windows file system maps to it, and dot-only segments
+  assert.deepStrictEqual(parsePruneList(['.GIT', '.Git/hooks', '.git.', '.git ', '.git. .', '...', 'a/.../b', 'a/.. /b', 'a/.git', 'a/.gitignore', '.gitignore'].join('\n')),
+    ['a/.git', 'a/.gitignore', '.gitignore']);
+});
+
+test('a_prune_entry_naming_dot_git_in_any_case_leaves_the_repository_alone', async () => {
+  const remote = prunedToolchain(tmp(), { list: '.GIT\n.git.\n.Git/hooks\n.make/vscode/release.py\n' });
+  const { dir, warnings } = await createProject({ url: `file://${remote}`, parent: tmp(), name: 'p', mediaDir: MEDIA, exec: exec() });
+  assert.deepStrictEqual(warnings, []);
+  assert.ok(fs.existsSync(path.join(dir, '.git', 'HEAD')));
+  assert.strictEqual(git(dir, 'rev-list', '--count', 'main'), '1');
+  assert.ok(!fs.existsSync(path.join(dir, '.make', 'vscode', 'release.py')));
 });

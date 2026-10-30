@@ -652,6 +652,10 @@ def test_prune_entries():
         "# c\n\n  \n a/b \nc/d/\n./e\nf//g\n/abs\n\\win\nC:/x\n../up\na/../b\n..\n.\n.git\n.git/hooks\nx\nx\n") == [
         "a/b", "c/d", "e", "f/g", "x"]
     assert upgrade.prune_entries("") == []
+    # .git in any spelling a case-insensitive or Windows file system maps to it, and dot-only segments
+    assert upgrade.prune_entries(
+        ".GIT\n.Git/hooks\n.git.\n.git \n.git. .\n...\na/.../b\na/.. /b\na/.git\na/.gitignore\n.gitignore\n") == [
+        "a/.git", "a/.gitignore", ".gitignore"]
 
 
 def test_upgrade_does_not_bring_pruned_paths(tmp_path):
