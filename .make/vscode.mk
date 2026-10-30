@@ -46,4 +46,8 @@ UPGRADE_ARGS ?=
 # the script goes through -c, so stdin stays free for its questions
 upgrade:
 	git fetch '$(STM8_TOOLCHAIN_URL)' main
-	@$(PYTHON) -c "$$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD $(UPGRADE_ARGS)
+	@script=$$(git show FETCH_HEAD:.make/upgrade.py) || { \
+		echo "The toolchain at $(STM8_TOOLCHAIN_URL) has no .make/upgrade.py, nothing was changed."; \
+		exit 1; \
+	}; \
+	$(PYTHON) -c "$$script" FETCH_HEAD $(UPGRADE_ARGS)

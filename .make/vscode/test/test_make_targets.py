@@ -4,7 +4,7 @@ import shutil
 import tarfile
 from pathlib import Path
 
-from conftest import COPY_IGNORE, ROOT, dap_info, old_project, project_copy, run_make, toolchain_remote
+from conftest import COPY_IGNORE, ROOT, dap_info, git, old_project, project_copy, run_make, toolchain_remote
 
 KEYS = {"device", "deviceFlash", "elf", "sfr", "openocd", "openocdLog", "gdbTarget"}
 
@@ -71,10 +71,26 @@ def test_debug_files_downloads_spl_when_missing(tmp_path):
 def test_make_upgrade_runs_script_from_fetched_ref(tmp_path):
     remote = toolchain_remote(tmp_path / "remote")
     project = old_project(tmp_path / "proj", with_include=True)
+    # a stale local script must not run: only the one from the fetched commit does the upgrade
+    stale = project / ".make" / "upgrade.py"
+    stale.write_text('import sys\nprint("STALE")\nsys.exit(1)\n')
+    git(project, "commit", "-q", "-am", "stale upgrade.py")
     proc = run_make(["upgrade", f"STM8_TOOLCHAIN_URL=file://{remote}", "UPGRADE_ARGS=--switch no"], cwd=project)
-    assert proc.returncode == 0, proc.stderr
+    assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "Updated .make/" in proc.stdout
-    assert "-include .make/vscode.mk" in (project / "Makefile").read_text()
+    assert "STALE" not in proc.stdout
+    assert stale.read_text() == (remote / ".make" / "upgrade.py").read_text()
+
+
+def test_make_upgrade_fails_when_remote_has_no_upgrade_script(tmp_path):
+    remote = toolchain_remote(tmp_path / "remote")
+    git(remote, "rm", "-q", ".make/upgrade.py")
+    git(remote, "commit", "-q", "-m", "no upgrade.py")
+    project = old_project(tmp_path / "proj", with_include=True)
+    proc = run_make(["upgrade", f"STM8_TOOLCHAIN_URL=file://{remote}", "UPGRADE_ARGS=--switch no"], cwd=project)
+    assert proc.returncode != 0
+    assert "upgrade.py" in proc.stderr + proc.stdout
+    assert git(project, "status", "--porcelain") == ""
 
 
 def test_make_upgrade_refusal_fails_make(tmp_path):
