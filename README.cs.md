@@ -171,7 +171,7 @@ když starší projekt pozná); bez editoru `make upgrade`, nebo, pokud ho tvůj
 
 ```bash
 git fetch https://gitlab.com/spseol/mit-no/STM8S-toolchain.git main
-python3 -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD
+python3 -I -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD
 ```
 
 Obnoví `.make/` a `.vscode/launch.json` a změny toolchainu slije do tvého `Makefile` (čip, frekvence a cesty

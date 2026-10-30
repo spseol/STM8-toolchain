@@ -1,12 +1,13 @@
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 
 import pytest
 
-from conftest import ROOT, VARIANT_FILES, git, load_upgrade, old_project, toolchain_remote
+from conftest import ROOT, VARIANT_FILES, _with_user_lines, git, load_upgrade, old_project, toolchain_remote
 
 upgrade = load_upgrade()
 
@@ -97,6 +98,22 @@ def test_check_project_without_git_binary(tmp_path, monkeypatch):
         upgrade.check_project(project)
 
 
+CONFLICTED = "<<<<<<< Makefile\nF_CPU=8000000\n=======\nF_CPU=16000000\n>>>>>>> new .make/Makefile-sdcc\n"
+
+
+@pytest.mark.parametrize("commit", [True, False])
+@pytest.mark.parametrize("symlink", [False, True])
+def test_check_project_refuses_conflict_markers(tmp_path, commit, symlink):
+    project = old_project(tmp_path, symlink=symlink)
+    with open(project / "Makefile", "a") as handle:
+        handle.write(CONFLICTED)
+    if commit:
+        commit_all(project, "markers")
+    with pytest.raises(upgrade.Refused, match="unresolved conflict markers") as info:
+        upgrade.check_project(project)
+    assert "uncommitted" not in str(info.value)
+
+
 def test_check_project_accepts_clean_old_project(tmp_path):
     assert upgrade.check_project(old_project(tmp_path)) is None
 
@@ -125,10 +142,24 @@ def test_old_project_with_include(tmp_path):
     assert (project / ".make" / "vscode.mk").is_file()
 
 
+def test_old_project_symlink_fixture_shape(tmp_path):
+    for key, name in VARIANT_FILES.items():
+        project = old_project(tmp_path / key, variant=key, symlink=True)
+        assert (project / "Makefile").is_symlink()
+        assert git(project, "ls-files", "-s", "Makefile").startswith("120000 ")
+        assert "DEVICE_FLASH=stm8s103f3" in (project / ".make" / name).read_text()
+        assert "F_CPU=8000000\n" in (project / "Makefile").read_text()
+        assert git(project, "status", "--porcelain") == ""
+
+
 def test_toolchain_remote_fixture(tmp_path):
     remote = toolchain_remote(tmp_path)
     assert git(remote, "rev-parse", "--abbrev-ref", "HEAD").strip() == "main"
     assert (remote / ".make" / "Makefile-sdcc").is_file()
+    # the old toolchain is in the history: the merge base of an old project
+    old = git(remote, "show", "HEAD~1:.make/Makefile-sdcc")
+    assert "vscode.mk" not in old
+    assert old == (old_project(tmp_path / "p") / ".make" / "Makefile-sdcc").read_text()
 
 
 # --- upgrade() and main() ----------------------------------------------------------------------
@@ -327,6 +358,143 @@ def test_switch_without_active_device_flash(tmp_path):
     assert any("DEVICE_FLASH" in note for note in report.notes)
 
 
+# --- Makefile committed as a symlink, the merge base from the toolchain history --------------
+
+def test_upgrade_sdcc_symlink_keeps_settings_and_becomes_regular_file(tmp_path):
+    project = prepared(tmp_path, symlink=True)
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    makefile = project / "Makefile"
+    assert not makefile.is_symlink()
+    assert makefile.is_file()
+    text = makefile.read_text()
+    assert re.search(r"^DEVICE_FLASH=stm8s103f3$", text, re.M)
+    assert "F_CPU=8000000" in text
+    assert "-include .make/vscode.mk" in text
+    assert "<<<<<<<" not in text
+    assert report.makefile == "merged"
+    assert "Makefile was a symlink to .make/Makefile-sdcc; it is now a regular file." in report.notes
+    # .make/ is the toolchain's again, the settings live in the root Makefile only
+    assert (project / ".make" / "Makefile-sdcc").read_text() == (ROOT / ".make" / "Makefile-sdcc").read_text()
+
+
+def test_upgrade_symlink_idempotent(tmp_path):
+    project = prepared(tmp_path, symlink=True)
+    upgrade.upgrade(project, "FETCH_HEAD")
+    commit_all(project, "upgraded")
+    before = (project / "Makefile").read_bytes()
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    assert report.makefile == "unchanged"
+    assert report.replaced == 0
+    assert report.notes == []
+    assert (project / "Makefile").read_bytes() == before
+    assert git(project, "status", "--porcelain") == ""
+
+
+@pytest.mark.parametrize("variant", ["sdcc-gas", "sdccrm"])
+def test_switch_of_symlinked_variant_gives_regular_makefile_and_no_loop(tmp_path, variant):
+    project = prepared(tmp_path, variant=variant, symlink=True)
+    report = upgrade.upgrade(project, "FETCH_HEAD", "yes")
+    makefile = project / "Makefile"
+    expected = DEVICE_LINE.sub(r"\1stm8s103f3", (ROOT / ".make" / "Makefile-sdcc").read_text())
+    assert not makefile.is_symlink()
+    assert makefile.read_text() == expected
+    assert report.makefile == "switched"
+    assert any("symlink" in note for note in report.notes)
+    name = VARIANT_FILES[variant]
+    assert (project / ".make" / name).read_text() == (ROOT / ".make" / name).read_text()
+    commit_all(project, "upgraded")
+    second = upgrade.upgrade(project, "FETCH_HEAD")
+    assert second.makefile == "unchanged"
+    assert second.replaced == 0
+    assert makefile.read_text() == expected
+    assert git(project, "status", "--porcelain") == ""
+
+
+def test_merge_base_found_when_student_edited_make_dir_copy(tmp_path):
+    # no symlink, but the student edited .make/Makefile-sdcc as well as the Makefile
+    project = prepared(tmp_path)
+    shutil.copy(project / "Makefile", project / ".make" / "Makefile-sdcc")
+    commit_all(project)
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    text = (project / "Makefile").read_text()
+    assert report.makefile == "merged"
+    assert re.search(r"^DEVICE_FLASH=stm8s103f3$", text, re.M) and "F_CPU=8000000" in text
+    assert "-include .make/vscode.mk" in text
+
+
+def test_no_usable_merge_base_gives_conflict_markers(tmp_path):
+    # the project's .make/Makefile-sdcc is far from every toolchain version: no base to trust
+    project = prepared(tmp_path, symlink=True)
+    own = project / ".make" / "Makefile-sdcc"
+    lines = own.read_text().count("\n")
+    own.write_text(own.read_text() + "".join(f"MY_SETTING_{i}=1\n" for i in range(lines)))
+    commit_all(project)
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    text = (project / "Makefile").read_text()
+    assert report.makefile == "conflict"
+    assert "<<<<<<< Makefile" in text
+    assert "MY_SETTING_0=1" in text
+    assert any("No toolchain version close" in note for note in report.notes)
+
+
+def test_device_flash_changed_by_the_merge_is_noted(tmp_path, monkeypatch):
+    project = prepared(tmp_path)
+    ours = (project / "Makefile").read_bytes()
+    monkeypatch.setattr(upgrade, "_merge_base", lambda *args: ours)  # base == ours: the result is theirs
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    assert report.makefile == "merged"
+    assert any("DEVICE_FLASH" in note and "stm8s103f3" in note for note in report.notes)
+
+
+def test_latin2_byte_in_makefile_is_merged_without_fake_conflicts(tmp_path):
+    remote = toolchain_remote(tmp_path / "remote")
+    path = remote / ".make" / "Makefile-sdcc"
+    current = path.read_bytes()
+    old = git(remote, "show", "HEAD~1:.make/Makefile-sdcc").encode()
+    head, rest = old.split(b"\n", 1)
+    latin2 = head + b"\n# \xe8ip a frekvence (Latin-2)\n" + rest
+    path.write_bytes(latin2)
+    git(remote, "commit", "-q", "-am", "old toolchain in Latin-2")
+    path.write_bytes(current)
+    git(remote, "commit", "-q", "-am", "toolchain again")
+    project = old_project(tmp_path / "project")
+    (project / ".make" / "Makefile-sdcc").write_bytes(latin2)
+    (project / "Makefile").write_bytes(_with_user_lines(latin2.decode("latin-1")).encode("latin-1"))
+    commit_all(project)
+    git(project, "fetch", "-q", str(remote), "main")
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    text = (project / "Makefile").read_bytes()
+    assert report.makefile == "merged"
+    assert b"<<<<<<<" not in text
+    assert b"F_CPU=8000000" in text and re.search(rb"^DEVICE_FLASH=stm8s103f3$", text, re.M)
+    assert b"-include .make/vscode.mk" in text
+
+
+def test_main_reports_unexpected_failure(tmp_path, monkeypatch, capsys):
+    project = prepared(tmp_path)
+
+    def broken(*args):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(upgrade, "_refresh_make_dir", broken)
+    code, out, err = run_main(project, monkeypatch, capsys, "FETCH_HEAD", "--json")
+    assert code == 1
+    assert "Update failed:" in err
+    assert "No space left on device" in err
+    assert "git checkout .make Makefile .vscode/launch.json" in err
+    assert "Traceback" not in err
+
+
+def test_main_refuses_committed_conflict_markers(tmp_path, monkeypatch, capsys):
+    project = prepared(tmp_path)
+    with open(project / "Makefile", "a") as handle:
+        handle.write(CONFLICTED)
+    commit_all(project)
+    code, _, err = run_main(project, monkeypatch, capsys, "FETCH_HEAD", "--json")
+    assert code == 1
+    assert "unresolved conflict markers" in err
+
+
 def test_upgrade_refuses_unknown_ref(tmp_path):
     project = prepared(tmp_path)
     with pytest.raises(upgrade.Refused):
@@ -385,13 +553,30 @@ def test_main_asks_on_tty(tmp_path, monkeypatch, capsys):
     assert "Makefile" in out
 
 
+SHADOWING = 'raise ImportError("the project difflib.py was imported instead of the standard library")\n'
+
+
 def test_upgrade_runs_via_python_dash_c(tmp_path):
     project = prepared(tmp_path)
-    proc = subprocess.run(["python3", "-c", UPGRADE_PY.read_text(), "FETCH_HEAD", "--json"],
+    # with -c the current folder (the project) would come first in sys.path; -I leaves it out
+    (project / "difflib.py").write_text(SHADOWING)
+    (project / "json.py").write_text(SHADOWING)
+    proc = subprocess.run(["python3", "-I", "-c", UPGRADE_PY.read_text(), "FETCH_HEAD", "--json"],
                           cwd=project, capture_output=True, text=True, stdin=subprocess.DEVNULL)
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout.splitlines()[-1])["makefile"] == "merged"
     assert "-include .make/vscode.mk" in (project / "Makefile").read_text()
+
+
+@pytest.mark.parametrize("name", ["README.md", "README.cs.md", "CLAUDE.md"])
+def test_documented_commands_run_python_isolated(name):
+    text = (ROOT / name).read_text(encoding="utf-8")
+    assert 'python3 -I -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD' in text
+    assert "python3 -c" not in text
+
+
+def test_make_upgrade_runs_python_isolated():
+    assert re.search(r"\$\(PYTHON\) -I -c ", (ROOT / ".make" / "vscode.mk").read_text())
 
 
 def test_upgrade_script_is_self_contained():

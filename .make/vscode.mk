@@ -50,11 +50,12 @@ STM8_TOOLCHAIN_URL ?= https://gitlab.com/spseol/mit-no/STM8S-toolchain.git
 UPGRADE_ARGS ?=
 
 # update .make/ and the Makefile from the toolchain repository, run by the fetched upgrade.py;
-# the script goes through -c, so stdin stays free for its questions
+# the script goes through -c, so stdin stays free for its questions; -I keeps the
+# project folder (a student's difflib.py, json.py, ...) out of sys.path
 upgrade:
 	git fetch '$(STM8_TOOLCHAIN_URL)' main
 	@script=$$(git show FETCH_HEAD:.make/upgrade.py) || { \
 		echo "The toolchain at $(STM8_TOOLCHAIN_URL) has no .make/upgrade.py, nothing was changed."; \
 		exit 1; \
 	}; \
-	$(PYTHON) -c "$$script" FETCH_HEAD $(UPGRADE_ARGS)
+	$(PYTHON) -I -c "$$script" FETCH_HEAD $(UPGRADE_ARGS)

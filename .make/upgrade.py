@@ -2,7 +2,7 @@
 """Upgrade a student's project to the current STM8S toolchain.
 
 Refreshes .make/ from the toolchain repository and merges the root Makefile.
-Nothing is committed or staged. It may be run as `python3 -c "$(git show REF:.make/upgrade.py)"`,
+Nothing is committed or staged. It may be run as `python3 -I -c "$(git show REF:.make/upgrade.py)"`,
 so it must not depend on its own path or on other files of .make/.
 """
 
@@ -23,6 +23,8 @@ REFUSE_RATIO = 0.4  # a Makefile differing from the closest variant in more line
 GUARDED_PATHS = (".make", "Makefile", ".vscode/launch.json")
 VARIANT_FILES = {"sdcc": "Makefile-sdcc", "sdcc-gas": "Makefile-sdcc-gas", "sdccrm": "Makefile-sdccrm"}
 DEVICE_FLASH = re.compile(r"^[ \t]*(DEVICE_FLASH=)(stm8\w+)[ \t]*$", re.M)  # like .make/switch_device.sh
+CONFLICT_MARKER = re.compile(rb"^<{7} ", re.M)
+HISTORY_LIMIT = 200  # versions of .make/Makefile-sdcc in the toolchain history searched for the merge base
 
 
 class Refused(Exception):
@@ -84,6 +86,9 @@ def check_project(project):
         raise Refused("The project has no .make/Makefile-sdcc, it does not look like an STM8S toolchain project.")
     if not (project / "Makefile").is_file():
         raise Refused("The project has no Makefile.")
+    if CONFLICT_MARKER.search((project / "Makefile").read_bytes()):
+        raise Refused("The Makefile still has unresolved conflict markers (<<<<<<<) from a previous update. "
+                      "Resolve them, commit, then update again.")
     changed = _git(project, "status", "--porcelain", "--", *GUARDED_PATHS).strip()
     if changed:
         raise Refused("There are uncommitted changes in .make, Makefile or .vscode/launch.json. "
@@ -130,17 +135,54 @@ def _show(project, ref, path):
     return out if code == 0 else None
 
 
-def _merge_makefile(project, base, theirs):
-    """Three-way merge of the project Makefile with the toolchain change BASE -> THEIRS
-    (bytes). Returns (merged bytes, number of conflicts)."""
+def _history(project, ref, path):
+    """Distinct contents (bytes) of PATH in the newest HISTORY_LIMIT commits of REF that changed it."""
+    revs = _git_bytes(project, "rev-list", f"--max-count={HISTORY_LIMIT}", ref, "--", path)[1].split()
+    query = b"".join(rev + b":" + path.encode() + b"\n" for rev in revs)
+    try:
+        out = subprocess.run(["git", "cat-file", "--batch"], cwd=project, input=query,
+                             capture_output=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError) as err:
+        raise Refused(f"Cannot read the toolchain history: {err}") from err
+    versions, pos = {}, 0
+    while pos < len(out):
+        end = out.index(b"\n", pos)
+        header = out[pos:end].split()
+        pos = end + 1
+        if len(header) == 3 and header[1] == b"blob":
+            size = int(header[2])
+            versions.setdefault(header[0], out[pos:pos + size])
+            pos += size + 1
+    return list(versions.values())
+
+
+def _merge_base(project, ref, path, head):
+    """The version of PATH in the history of REF closest to HEAD (the project's committed copy,
+    bytes; the student may have edited it). None when there is no version close enough to trust."""
+    versions = _history(project, ref, path)
+    if head is None or not versions:
+        return None
+    if head in versions:
+        return head
+    text = head.decode(errors="replace")
+    distance, best = min(((_differences(text, data.decode(errors="replace")), index)
+                          for index, data in enumerate(versions)))
+    return versions[best] if distance <= REFUSE_RATIO * len(text.splitlines()) else None
+
+
+def _merge_makefile(project, ours, base, theirs):
+    """Three-way merge of OURS (the project Makefile) with the toolchain change BASE -> THEIRS
+    (bytes; BASE None merges two-way: every difference is a conflict). Returns (merged bytes,
+    number of conflicts)."""
     with tempfile.TemporaryDirectory() as tmp:
-        old, new = Path(tmp, "old"), Path(tmp, "new")
-        old.write_bytes(base)
+        mine, old, new = Path(tmp, "mine"), Path(tmp, "old"), Path(tmp, "new")
+        mine.write_bytes(ours)
+        old.write_bytes(base or b"")
         new.write_bytes(theirs)
         try:
             proc = subprocess.run(
                 ["git", "merge-file", "-p", "-L", "Makefile", "-L", "old .make/Makefile-sdcc",
-                 "-L", "new .make/Makefile-sdcc", "Makefile", str(old), str(new)],
+                 "-L", "new .make/Makefile-sdcc", str(mine), str(old), str(new)],
                 cwd=project, capture_output=True)
         except OSError as err:
             raise Refused(f"Cannot run git: {err}") from err
@@ -252,7 +294,9 @@ def upgrade(project, ref, switch=None):
         data = _show(project, "HEAD", f".make/{name}")
         if data is not None:
             variants[key] = data.decode(errors="replace")
-    current = (project / "Makefile").read_bytes()
+    makefile = project / "Makefile"
+    link = os.readlink(makefile) if makefile.is_symlink() else None
+    current = makefile.read_bytes()  # through a symlink: the student's .make/Makefile-<variant>, read before .make/ is refreshed
     variant = detect_variant(current.decode(errors="replace"), variants)
     if variant != "sdcc":
         if switch is None:
@@ -263,15 +307,28 @@ def upgrade(project, ref, switch=None):
 
     report = Report()
     if variant == "sdcc":
-        result, conflicts = _merge_makefile(project, variants["sdcc"].encode(), theirs)
+        path = ".make/Makefile-sdcc"
+        base = _merge_base(project, ref, path, _show(project, "HEAD", path))
+        result, conflicts = _merge_makefile(project, current, base, theirs)
+        if base is None:
+            report.notes.append("No toolchain version close to the project's .make/Makefile-sdcc was found, so every "
+                                "difference from the new Makefile is marked as a conflict.")
         report.makefile = "conflict" if conflicts else ("unchanged" if result == current else "merged")
+        before, after = (DEVICE_FLASH.search(text.decode(errors="replace")) for text in (current, result))
+        if not conflicts and (before and before.group(2)) != (after and after.group(2)):
+            report.notes.append(f"DEVICE_FLASH changed from {before and before.group(2)} to "
+                                f"{after and after.group(2)} in the merge. Check DEVICE_FLASH in the Makefile.")
     else:
         result = _switched_makefile(current, theirs, report)
         report.makefile = "switched"
 
     _refresh_make_dir(project, new_files, report)
-    if result != current:
-        (project / "Makefile").write_bytes(result)
+    if link is not None:  # never write through it: it points into the refreshed .make/
+        makefile.unlink()
+        makefile.write_bytes(result)
+        report.notes.append(f"Makefile was a symlink to {link}; it is now a regular file.")
+    elif result != current:
+        makefile.write_bytes(result)
     _update_gitignore(project, ref, report)
     _update_launch(project, ref, report)
     return report
@@ -323,6 +380,10 @@ def main(argv):
             report = upgrade(project, args.ref, _ask_switch(need.variant))
     except Refused as err:
         print(err, file=sys.stderr)
+        return 1
+    except Exception as err:  # OSError, UnicodeError, ...: say what to do instead of a traceback
+        print(f"Update failed: {err}. .make/ may be partly updated; `git status` shows what changed and "
+              "`git checkout .make Makefile .vscode/launch.json` restores it.", file=sys.stderr)
         return 1
     print("\n".join(_summary(report)))
     if args.json:

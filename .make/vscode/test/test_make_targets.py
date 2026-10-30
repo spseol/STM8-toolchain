@@ -82,6 +82,18 @@ def test_make_upgrade_runs_script_from_fetched_ref(tmp_path):
     assert stale.read_text() == (remote / ".make" / "upgrade.py").read_text()
 
 
+def test_make_upgrade_ignores_python_modules_of_the_project(tmp_path):
+    remote = toolchain_remote(tmp_path / "remote")
+    project = old_project(tmp_path / "proj", with_include=True)
+    (project / "difflib.py").write_text('raise ImportError("project difflib.py imported")\n')
+    git(project, "add", "difflib.py")
+    git(project, "commit", "-q", "-m", "a student module named like the standard library")
+    proc = run_make(["upgrade", f"STM8_TOOLCHAIN_URL=file://{remote}", "UPGRADE_ARGS=--switch no"], cwd=project)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "project difflib.py imported" not in proc.stderr
+    assert "Updated .make/" in proc.stdout
+
+
 def test_make_upgrade_fails_when_remote_has_no_upgrade_script(tmp_path):
     remote = toolchain_remote(tmp_path / "remote")
     git(remote, "rm", "-q", ".make/upgrade.py")

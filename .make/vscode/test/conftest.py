@@ -178,8 +178,10 @@ def _with_user_lines(text):
 
 
 def toolchain_remote(tmp_path):
-    """Git repo (branch main, one commit) with the working-tree content of every file
-    that ROOT tracks. Stands for the toolchain repository an upgrade fetches from."""
+    """Git repo (branch main) with the working-tree content of every file that ROOT tracks.
+    Stands for the toolchain repository an upgrade fetches from. Its history has two commits:
+    the old toolchain (Makefiles without `-include .make/vscode.mk`, as old_project has them),
+    then the current one, so the upgrade finds the old Makefile-sdcc as the merge base."""
     remote = tmp_path / "toolchain-remote"
     remote.mkdir(parents=True)
     for name in git(ROOT, "ls-files", "-z").split("\0"):
@@ -190,15 +192,24 @@ def toolchain_remote(tmp_path):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target, follow_symlinks=False)
     git(remote, "init", "-q", "-b", "main")
+    makefiles = [remote / "Makefile", *(remote / ".make" / name for name in VARIANT_FILES.values())]
+    current = {path: path.read_text() for path in makefiles}
+    for path, text in current.items():
+        path.write_text(_strip_include(text))
     git(remote, "add", "-A")
-    git(remote, "commit", "-q", "-m", "toolchain")
+    git(remote, "commit", "-q", "-m", "old toolchain")
+    for path, text in current.items():
+        path.write_text(text)
+    git(remote, "commit", "-q", "-am", "toolchain")
     return remote
 
 
-def old_project(tmp_path, variant="sdcc", dirty=False, with_include=False):
+def old_project(tmp_path, variant="sdcc", dirty=False, with_include=False, symlink=False):
     """Git repo (single commit on main) as a student has it from an old toolchain: stale .make/,
     root Makefile copied from a variant, own src/main.c, .vscode/launch.json.
-    DIRTY leaves an uncommitted change in Makefile; WITH_INCLUDE keeps `-include .make/vscode.mk`."""
+    DIRTY leaves an uncommitted change in Makefile; WITH_INCLUDE keeps `-include .make/vscode.mk`.
+    SYMLINK commits the Makefile as a symlink to .make/Makefile-<variant>, and the student's
+    settings are edited inside that file (as most real student projects have it)."""
     project = tmp_path / "old-project"
     project.mkdir(parents=True)
     make_dir = project / ".make"
@@ -218,8 +229,12 @@ def old_project(tmp_path, variant="sdcc", dirty=False, with_include=False):
         for name in VARIANT_FILES.values():
             path = make_dir / name
             path.write_text(_strip_include(path.read_text()))
-    variant_text = (make_dir / VARIANT_FILES[variant]).read_text()
-    (project / "Makefile").write_text(_with_user_lines(variant_text))
+    variant_file = make_dir / VARIANT_FILES[variant]
+    if symlink:
+        variant_file.write_text(_with_user_lines(variant_file.read_text()))
+        (project / "Makefile").symlink_to(f".make/{VARIANT_FILES[variant]}")
+    else:
+        (project / "Makefile").write_text(_with_user_lines(variant_file.read_text()))
     (project / "src").mkdir()
     (project / "src" / "main.c").write_text("/* my own program */\nint main(void) { return 42; }\n")
     (project / "inc").mkdir()

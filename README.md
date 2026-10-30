@@ -174,7 +174,7 @@ does not have that target yet:
 
 ```bash
 git fetch https://gitlab.com/spseol/mit-no/STM8S-toolchain.git main
-python3 -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD
+python3 -I -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD
 ```
 
 It refreshes `.make/` and `.vscode/launch.json` and merges the toolchain changes into your `Makefile`
