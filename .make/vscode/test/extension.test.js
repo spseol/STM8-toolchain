@@ -9,7 +9,7 @@ const { PassThrough } = require('node:stream');
 
 // extension.js needs the `vscode` module, which only exists inside the editor: a small fake.
 function load() {
-  const seen = { providers: {}, factories: {}, trackers: {}, commands: {}, views: {}, panels: [], messages: [], executed: [], opened: [], shown: [], updates: [], picks: [], dialogs: [], inputs: [], projectsFolder: '' };
+  const seen = { providers: {}, taskProviders: {}, factories: {}, trackers: {}, commands: {}, views: {}, panels: [], messages: [], executed: [], opened: [], shown: [], updates: [], picks: [], dialogs: [], inputs: [], projectsFolder: '' };
   class EventEmitter {
     constructor() {
       this.listeners = [];
@@ -31,7 +31,15 @@ function load() {
       executeCommand: async (...args) => { seen.executed.push(args); },
     },
     StatusBarAlignment: { Left: 1 },
-    tasks: { onDidEndTaskProcess: (listener) => { seen.taskEnded = listener; return { dispose() {} }; } },
+    tasks: {
+      onDidEndTaskProcess: (listener) => { seen.taskEnded = listener; return { dispose() {} }; },
+      registerTaskProvider: (type, provider) => { seen.taskProviders[type] = provider; return { dispose() {} }; },
+    },
+    Task: class { constructor(definition, scope, name, source, execution, problemMatchers) { Object.assign(this, { definition, scope, name, source, execution, problemMatchers }); } },
+    ShellExecution: class { constructor(commandLine, options) { this.commandLine = commandLine; this.options = options; } },
+    TaskGroup: { Build: { id: 'build' } },
+    TaskRevealKind: { Silent: 3 },
+    TaskPanelKind: { Shared: 1 },
     ViewColumn: { Beside: -2 },
     TreeItem: class { constructor(label, collapsibleState) { this.label = label; this.collapsibleState = collapsibleState; } },
     TreeItemCollapsibleState: { None: 0, Collapsed: 1 },
@@ -437,6 +445,25 @@ test('failed_build_blocks_debug_anyway', async () => {
   assert.match(seen.messages.find(([kind]) => kind === 'error')[1], /build failed/i);
   seen.taskEnded({ execution: { task: { name: 'stm8: build' } }, exitCode: 0 });
   assert.deepStrictEqual(await resolve(), withTask);
+});
+
+test('registers_the_stm8_build_task_provider', () => {
+  const { extension, project, seen } = load();
+  project.versionNotice = () => null;
+  extension.activate(context());
+  assert.ok(seen.taskProviders.stm8);
+});
+
+test('failed_build_by_the_task_provider_cancels_the_launch', async () => {
+  // a provider task has name "build" and source "stm8"; preLaunchTask refers to its label "stm8: build"
+  const { extension, project, seen } = load();
+  project.versionNotice = () => null;
+  project.readProjectInfo = async () => ({ elf: '/x' });
+  project.preflight = async () => [];
+  extension.activate(context());
+  const withTask = { ...config, preLaunchTask: 'stm8: build' };
+  seen.taskEnded({ execution: { task: { name: 'build', source: 'stm8' } }, exitCode: 2 });
+  assert.strictEqual(await seen.providers.stm8.resolveDebugConfigurationWithSubstitutedVariables(folder, { ...withTask }), undefined);
 });
 
 test('failed_build_with_makefile_conflicts_shows_the_conflict_message', async () => {

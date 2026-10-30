@@ -134,10 +134,34 @@ def test_tracked_vscode_files_are_not_ignored():
     assert subprocess.run(["git", "check-ignore", "-q", ".make/vscode/stm8-toolchain.vsix"], cwd=ROOT).returncode == 0
 
 
-def test_problem_matcher_matches_real_build_output(tmp_path):
+def tasks_json_matcher():
+    return json.loads((ROOT / ".vscode" / "tasks.json").read_text())["tasks"][0]["problemMatcher"]
+
+
+def package_matcher():
+    matchers = json.loads((VSCODE / "package.json").read_text())["contributes"]["problemMatchers"]
+    return next(m for m in matchers if m["name"] == "sdcc")
+
+
+def test_provider_problem_matcher_equals_tasks_json():
+    """The provider's $sdcc (package.json) and the shell task in .vscode/tasks.json must stay the same matcher."""
+    mine = package_matcher()
+    assert mine["owner"] == "sdcc"
+    theirs = tasks_json_matcher()
+    assert {k: v for k, v in mine.items() if k != "name"} == theirs
+
+
+def test_package_json_declares_task_definition():
+    package = json.loads((VSCODE / "package.json").read_text())
+    assert "stm8" in {d["type"] for d in package["contributes"]["taskDefinitions"]}
+    # the provider is the only place that makes the task, and it refers to the matcher declared above
+    assert "$sdcc" in (VSCODE / "src" / "tasks.js").read_text()
+
+
+@pytest.mark.parametrize("source", ["package.json", "tasks.json"])
+def test_problem_matcher_matches_real_build_output(tmp_path, source):
     """The SDCC messages the build prints (colored by recolor.py) must produce problems."""
-    tasks = json.loads((ROOT / ".vscode" / "tasks.json").read_text())["tasks"]
-    pattern = tasks[0]["problemMatcher"]["pattern"]
+    pattern = (package_matcher() if source == "package.json" else tasks_json_matcher())["pattern"]
     regexp = re.compile(pattern["regexp"])
     project = project_copy(tmp_path)
     with open(project / "src" / "main.c", "a") as f:

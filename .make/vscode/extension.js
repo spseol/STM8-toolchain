@@ -10,6 +10,7 @@ const { registerStatusBar } = require('./src/statusbar');
 const project = require('./src/project'); // called through the object, so the tests can replace functions
 const upgrade = require('./src/upgrade');
 const newproject = require('./src/newproject');
+const { registerBuildTask } = require('./src/tasks');
 
 const TYPE = 'stm8';
 const RESUMING = new Set(['continue', 'next', 'stepIn', 'stepOut', 'stepBack', 'reverseContinue']);
@@ -220,7 +221,12 @@ function activate(context) {
   context.subscriptions.push(
     output,
     view,
-    vscode.tasks.onDidEndTaskProcess((event) => builds.set(event.execution.task.name, event.exitCode)),
+    registerBuildTask(vscode),
+    vscode.tasks.onDidEndTaskProcess((event) => {
+      const { name, source } = event.execution.task;
+      builds.set(name, event.exitCode);
+      builds.set(`${source}: ${name}`, event.exitCode); // preLaunchTask names a provider task by its label
+    }),
     vscode.debug.registerDebugConfigurationProvider(TYPE, configProvider),
     vscode.debug.registerDebugAdapterDescriptorFactory(TYPE, adapterFactory),
     vscode.debug.registerDebugAdapterTrackerFactory(TYPE, tracker),
