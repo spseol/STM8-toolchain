@@ -2,7 +2,7 @@
 
 All notable changes to this extension are documented here.
 
-## 0.2.0
+## 0.2.0 31-10-2026
 
 ### Added
 
@@ -20,7 +20,7 @@ All notable changes to this extension are documented here.
 
 - README rewritten for people who do not know the toolchain.
 
-## 0.1.0
+## 0.1.0 30-10-2026
 
 ### Added
 
