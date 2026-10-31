@@ -1,7 +1,7 @@
 # Releasing the extension
 
 The extension is published on two marketplaces: Open VSX (VSCodium, Eclipse Theia, ...) by
-`make vscode-release`, and the Visual Studio Marketplace (VS Code) by hand.
+`python3 .make/vscode/release.py`, and the Visual Studio Marketplace (VS Code) by hand.
 
 ## One-time setup
 
@@ -45,7 +45,7 @@ The extension is published on two marketplaces: Open VSX (VSCodium, Eclipse Thei
 The release script calls the pinned `ovsx@<OVSX_VERSION>` (constant in `release.py`) with
 `npx --yes`, because the token is handed to that program. To move to a newer one: look up the
 version with `npm view ovsx version`, read the ovsx changelog for breaking changes, edit
-`OVSX_VERSION` in `.make/vscode/release.py`, and try `make vscode-release DRY_RUN=1` (the dry run
+`OVSX_VERSION` in `.make/vscode/release.py`, and try `python3 .make/vscode/release.py --dry-run` (the dry run
 does not call ovsx, so also check `npx --yes ovsx@NEW --version`).
 
 ## Releasing
@@ -53,12 +53,12 @@ does not call ovsx, so also check `npx --yes ovsx@NEW --version`).
 1. Bump `version` in `.make/vscode/package.json` and add a heading with the version and the date
    to `.make/vscode/CHANGELOG.md`.
 2. Commit and merge to `main`.
-3. `make vscode-release`
+3. `python3 .make/vscode/release.py`
 4. Upload `.make/vscode/stm8-toolchain.vsix` to Microsoft by hand: the script opens
    <https://marketplace.visualstudio.com/manage/publishers/spseol>; there choose the extension,
    then `...` > Update, and select the file (the first time: "New extension" > "Visual Studio Code").
 
-`make vscode-release DRY_RUN=1` does everything up to and including packing the VSIX (checks,
+`python3 .make/vscode/release.py --dry-run` does everything up to and including packing the VSIX (checks,
 tests, `pack.py`) but publishes, tags and pushes nothing; it needs no token.
 
 ## What the script checks

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Release the VS Code extension: tests, VSIX, publish to Open VSX, tag, push, prepare Microsoft.
 
-Usage: release.py [--dry-run]   (or `make vscode-release [DRY_RUN=1]`)
+Usage: python3 .make/vscode/release.py [--dry-run]
 
 The Open VSX token comes from $OVSX_PAT or ~/.config/stm8-toolchain/ovsx-token. It is passed to
 `ovsx` only through the environment of that one child process: never in argv (visible in `ps`),

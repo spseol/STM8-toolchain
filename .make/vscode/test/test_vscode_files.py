@@ -437,13 +437,6 @@ def test_dap_info_works_in_a_pruned_project(pruned_copy):
     assert dap_info(cwd=pruned_copy)["deviceFlash"].startswith("stm8s")
 
 
-def test_vscode_release_explains_that_it_is_not_in_a_pruned_project(pruned_copy):
-    proc = run_make(["vscode-release"], cwd=pruned_copy)
-    assert proc.returncode != 0
-    assert ("vscode-release is only available in the full toolchain checkout "
-            "(release.py is not part of student projects).") in proc.stdout + proc.stderr
-
-
 def test_vsix_of_a_pruned_project_equals_the_full_one(pruned_copy, tmp_path):
     out = tmp_path / "pruned.vsix"
     subprocess.run(["python3", str(pruned_copy / ".make" / "vscode" / "pack.py"), str(out)], check=True)
