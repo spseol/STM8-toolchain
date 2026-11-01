@@ -11,7 +11,7 @@ Supports Linux, Windows, and macOS.
 
 * *build* using the free [SDCC](http://sdcc.sourceforge.net/) compiler
 * *flash* via [OpenOCD](https://openocd.org/) or [stm8flash](https://github.com/vdudouyt/stm8flash)
-* *debug* with GDB and `cgdb`
+* *debug* with [STM8 GDB](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) (`stm8-gdb`) and `cgdb`, or in VS Code / VSCodium
 * SPL integration and VS Code / clangd support via `compile_commands.json`
 
 ## How does it work?
@@ -87,6 +87,11 @@ endif
 
 ## Debugging
 
+Debugging needs `stm8-gdb`: [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb), a fork of GNU binutils-gdb
+with STM8 support, version 15 or newer, with Python and Debug Adapter Protocol (DAP) support (the DAP is needed
+for VS Code). It is not part of this toolchain: install it first, the build instructions are in its
+repository.
+
 `make debug` does everything at once: it builds the project with debug info,
 starts OpenOCD (it runs only while debugging), uploads the program to the chip
 and stops at the beginning of `main()`. No second terminal and no manual
@@ -145,11 +150,12 @@ per line) can be edited by hand, e.g. to ship watched variables with an example.
 
 The same debugging works in VS Code (or VSCodium) with the extension from `.make/vscode/`:
 
-1. Install the extension (once per computer). It is meant to be installed from the extension marketplace
-   of your editor: search for *STM8 Toolchain Debugger* (publisher `spseol`) on Open VSX (VSCodium) or in the
-   Visual Studio Marketplace (VS Code), as soon as it has been published there. Until then, and for
-   development, `make vscode` packages the extension from `.make/vscode/` and installs it
-   (`code` or `codium` must be in `PATH`).
+1. Install the extension (once per computer) from the extension marketplace of your editor: search for
+   *STM8 Toolchain Debugger* (publisher `spseol`) on [Open VSX](https://open-vsx.org/extension/spseol/stm8-toolchain)
+   (VSCodium) or in the
+   [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=spseol.stm8-toolchain) (VS Code).
+   Without a marketplace, and for development, `make vscode` packages the extension from `.make/vscode/` and
+   installs it (`code` or `codium` must be in `PATH`).
 2. Restart the editor. Create a project with **`STM8: New Project…`** (Command Palette; it clones the toolchain
    into a new folder, see `stm8.projectsFolder`), or open the folder of an existing project.
 3. Press `F5`. The project is built, uploaded to the chip and the program stops at `main()`.
@@ -164,7 +170,9 @@ Single bits of such registers cannot be changed (the write would read the regist
 has *Build*, *Flash*, *Debug* and the target chip (click it to switch). Details and troubleshooting:
 [`.make/vscode/README.md`](.make/vscode/README.md).
 
-It needs `stm8-gdb` 15 or newer and `openocd` in `PATH`, as `make debug` does.
+It needs [`stm8-gdb`](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) 15 or newer (it is not part of the extension, install it first) and `openocd`
+in `PATH`, as `make debug` does. The extension is tested on Linux; everything except STM8 binutils-gdb is also
+tested on macOS, so it should work there once `stm8-gdb` does.
 
 #### Updating the toolchain
 
@@ -190,7 +198,8 @@ for you to resolve). It never touches `src/`, `inc/` or your README and commits 
   it can be installed together with [Git](https://git-scm.com/download/win).
 * [SDCC](http://sdcc.sourceforge.net/)
   or [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)
-* [STM8 binutils](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) (`stm8-gdb`, `stm8-ld`)
+* [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) -- a fork of GNU binutils-gdb with STM8 support
+  (`stm8-gdb`, `stm8-ld`); `stm8-gdb` 15 or newer with Python and DAP for debugging
 * [OpenOCD](https://openocd.org/) for `flash` and `debug`
 * [cgdb](https://cgdb.github.io/) for `make debug` (gdb TUI is used without it)
   or [STVP](https://www.st.com/en/development-tools/stvp-stm8.html)

@@ -11,7 +11,7 @@ Podporuje Linux, Windows i macOS.
 
 * *build* pomocí svobodného překladače [SDCC](http://sdcc.sourceforge.net/)
 * *flash* přes [OpenOCD](https://openocd.org/) nebo [stm8flash](https://github.com/vdudouyt/stm8flash)
-* *debug* pomocí GDB a `cgdb`
+* *debug* pomocí [STM8 GDB](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) (`stm8-gdb`) a `cgdb`, nebo ve VS Code / VSCodium
 *  integraci SPL a podporu VS Code / clangd přes `compile_commands.json`.
 
 ## Jak to funguje?
@@ -89,6 +89,10 @@ endif
 
 ## Ladění
 
+K ladění je potřeba `stm8-gdb`: [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb), fork GNU binutils-gdb
+s podporou STM8, verze 15 nebo novější, s podporou Pythonu a Debug Adapter Protocol (DAP; ten potřebuje VS Code).
+Není součástí tohoto toolchainu, nainstaluj ho nejdřív, postup sestavení je v jeho repozitáři.
+
 `make debug` udělá všechno najednou: přeloží projekt s debug informacemi,
 spustí OpenOCD (běží jen po dobu ladění), nahraje program do chipu a zastaví
 na začátku `main()`. Druhý terminál ani ruční spouštění OpenOCD nejsou potřeba.
@@ -145,10 +149,11 @@ jde upravit i ručně, třeba připravit k příkladu sledované proměnné.
 
 Stejné ladění funguje ve VS Code (nebo VSCodium) s rozšířením z `.make/vscode/`:
 
-1. Nainstaluj rozšíření (stačí jednou na počítač). Je určeno k instalaci z obchodu s rozšířeními tvého editoru:
-   hledej *STM8 Toolchain Debugger* (vydavatel `spseol`) na Open VSX (VSCodium) nebo ve Visual Studio Marketplace
-   (VS Code), jakmile tam bude zveřejněno. Do té doby a pro vývoj `make vscode` rozšíření z `.make/vscode/`
-   zabalí a nainstaluje (`code` nebo `codium` musí být v `PATH`).
+1. Nainstaluj rozšíření (stačí jednou na počítač) z obchodu s rozšířeními tvého editoru: hledej
+   *STM8 Toolchain Debugger* (vydavatel `spseol`) na [Open VSX](https://open-vsx.org/extension/spseol/stm8-toolchain)
+   (VSCodium) nebo ve [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=spseol.stm8-toolchain)
+   (VS Code). Bez obchodu a pro vývoj `make vscode` rozšíření z `.make/vscode/` zabalí a nainstaluje
+   (`code` nebo `codium` musí být v `PATH`).
 2. Restartuj editor. Nový projekt vytvoř příkazem **`STM8: New Project…`** (Command Palette; naklonuje toolchain
    do nové složky, viz nastavení `stm8.projectsFolder`), nebo otevři složku existujícího projektu.
 3. Stiskni `F5`. Projekt se přeloží, nahraje do chipu a program se zastaví na `main()`.
@@ -162,7 +167,9 @@ Jednotlivé bity takových registrů nejdou měnit (zápis by registr nejdřív 
 (kliknutím ho přepneš). Podrobnosti a řešení potíží:
 [`.make/vscode/README.md`](.make/vscode/README.md).
 
-Potřebuje `stm8-gdb` 15 nebo novější a `openocd` v `PATH`, stejně jako `make debug`.
+Potřebuje [`stm8-gdb`](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) 15 nebo novější (není součástí rozšíření, nainstaluj ho nejdřív) a `openocd` v `PATH`,
+stejně jako `make debug`. Rozšíření je testované na Linuxu; vše kromě STM8 binutils-gdb je otestované i na macOS,
+takže tam poběží, jakmile poběží `stm8-gdb`.
 
 #### Aktualizace toolchainu
 
@@ -187,7 +194,8 @@ a commitni sám. Vlastní změny v `.make/`, `Makefile` a `.vscode/launch.json` 
   dá nainstalovat společně s [Git](https://git-scm.com/download/win)em.
 * [SDCC](http://sdcc.sourceforge.net/)
   nebo [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)
-* [STM8 binutils](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) (`stm8-gdb`, `stm8-ld`)
+* [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) -- fork GNU binutils-gdb s podporou STM8
+  (`stm8-gdb`, `stm8-ld`); pro ladění `stm8-gdb` 15 nebo novější s Pythonem a DAP
 * [OpenOCD](https://openocd.org/) pro `flash` a `debug`
 * [cgdb](https://cgdb.github.io/) pro `make debug` (bez něj se použije gdb TUI)
   nebo [STVP](https://www.st.com/en/development-tools/stvp-stm8.html)
