@@ -6,6 +6,10 @@ microcontroller projects from VS Code or VSCodium. The extension drives the open
 [SDCC](http://sdcc.sourceforge.net/) compiler, [OpenOCD](https://openocd.org/) and `stm8-gdb`),
 which is used to teach microcontroller programming.
 
+**Before you install the extension, get `stm8-gdb`**: it is a special build of GDB for the STM8
+(*STM8 binutils-gdb*) and it is not part of the extension. Without it nothing can be debugged. Find
+it, with the build instructions, at <https://gitlab.com/spseol/mit-no/stm8-binutils-gdb>.
+
 ## What it does
 
 - **Build and flash** the project with a click in the status bar: it runs `make` / `make flash` in
@@ -20,8 +24,10 @@ which is used to teach microcontroller programming.
 
 ## Requirements
 
-Linux only: the extension relies on `lsusb`, `pgrep` and a pipe to OpenOCD; Windows and macOS are not
-supported or tested. You need:
+The extension is tested on Linux. Everything except STM8 binutils-gdb has also been tested on macOS, so
+if you get `stm8-gdb` running on macOS, the extension should work there too (a complete run on macOS is
+still to be confirmed; there is no `lsusb` on macOS, so the ST-Link check is skipped and OpenOCD reports
+a missing board instead). Windows is not supported or tested. You need:
 
 - `make`, `python3` and `git`
 - [SDCC](http://sdcc.sourceforge.net/) (the compiler)

@@ -2,6 +2,15 @@
 
 All notable changes to this extension are documented here.
 
+## 0.2.1 01-11-2026
+
+### Changed
+
+- README: the first paragraph says that `stm8-gdb` (the *STM8 binutils-gdb* build of GDB) is not part
+  of the extension, has to be installed first, and links to where to get it.
+- README: the extension is tested on Linux; everything except STM8 binutils-gdb is also tested on
+  macOS, so it should work there once `stm8-gdb` does.
+
 ## 0.2.0 31-10-2026
 
 ### Added
