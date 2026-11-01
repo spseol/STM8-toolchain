@@ -3,6 +3,12 @@
 The extension is published on two marketplaces: Open VSX (VSCodium, Eclipse Theia, ...) by
 `python3 .make/vscode/release.py`, and the Visual Studio Marketplace (VS Code) by hand.
 
+The script makes two VSIX files from the same sources. The one for Open VSX comes from `pack.py`
+(`stm8-toolchain.vsix`, no Node needed to build it, also what `make vscode` installs). The one for
+the Marketplace comes from Microsoft's own `vsce package` (`stm8-toolchain-marketplace.vsix`),
+because the Marketplace is stricter about the package manifest and rejected the one from `pack.py`.
+Both need Node.js: `ovsx@1.3.0` needs Node 22 or newer, `vsce@3.9.2` Node 20 or newer.
+
 ## One-time setup
 
 ### Microsoft Visual Studio Marketplace
@@ -54,12 +60,12 @@ does not call ovsx, so also check `npx --yes ovsx@NEW --version`).
    to `.make/vscode/CHANGELOG.md`.
 2. Commit and merge to `main`.
 3. `python3 .make/vscode/release.py`
-4. Upload `.make/vscode/stm8-toolchain.vsix` to Microsoft by hand: the script opens
+4. Upload `.make/vscode/stm8-toolchain-marketplace.vsix` (not `stm8-toolchain.vsix`) to Microsoft by hand: the script opens
    <https://marketplace.visualstudio.com/manage/publishers/spseol>; there choose the extension,
    then `...` > Update, and select the file (the first time: "New extension" > "Visual Studio Code").
 
-`python3 .make/vscode/release.py --dry-run` does everything up to and including packing the VSIX (checks,
-tests, `pack.py`) but publishes, tags and pushes nothing; it needs no token.
+`python3 .make/vscode/release.py --dry-run` does everything up to and including packing both VSIX
+files (checks, tests, `pack.py`, `vsce package`) but publishes, tags and pushes nothing; it needs no token.
 
 ## What the script checks
 
@@ -70,13 +76,16 @@ In this order, stopping at the first problem:
 2. The tag `vscode-v<version>` (version from `package.json`) does not exist yet.
 3. A token is available (`OVSX_PAT` or `~/.config/stm8-toolchain/ovsx-token`); not needed for a dry run.
 4. `python -m pytest .make/vscode` (the interpreter that runs the script) and `node --test .make/vscode/test/*.test.js` pass.
-5. The VSIX is packed to `.make/vscode/stm8-toolchain.vsix`. A dry run ends here.
-6. `npx ovsx publish` uploads the VSIX to Open VSX. The token reaches it only through the
+5. The VSIX for Open VSX is packed by `pack.py` to `.make/vscode/stm8-toolchain.vsix`, the one for the
+   Marketplace by `npx @vscode/vsce package` (from a clean copy of the extension files) to
+   `.make/vscode/stm8-toolchain-marketplace.vsix`. A dry run ends here. A failure of `vsce` stops the
+   release before anything is published.
+6. `npx ovsx publish` uploads the first VSIX to Open VSX. The token reaches it only through the
    environment variable `OVSX_PAT`. When this fails, no tag is created.
 7. The annotated tag `vscode-v<version>` is created and `main` plus the tag are pushed to `origin`
    and `github`. When a push fails, the script says which remote and prints the command to retry;
    the extension is already published at that point, so do not release again.
-8. The path of the VSIX is printed and the Marketplace page is opened (a failure of `xdg-open` is
+8. The paths of both VSIX files are printed (upload the Marketplace one) and the Marketplace page is opened (a failure of `xdg-open` is
    only a warning).
 
 ## Limits of the checks

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Release the VS Code extension: tests, VSIX, publish to Open VSX, tag, push, prepare Microsoft.
 
+Two VSIX files are made. Open VSX gets the one from pack.py (no Node needed to build it). The Visual
+Studio Marketplace is stricter about the package manifest, so the file for it is made by Microsoft's
+own `vsce package`; it is uploaded by hand.
+
 Usage: python3 .make/vscode/release.py [--dry-run]
 
 The Open VSX token comes from $OVSX_PAT or ~/.config/stm8-toolchain/ovsx-token. It is passed to
@@ -9,11 +13,14 @@ never printed and never stored in the repository.
 """
 
 import argparse
+import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import quote
@@ -24,9 +31,12 @@ TOKEN_VAR = "OVSX_PAT"
 # pinned: the token is handed to whatever npx resolves, so a new ovsx is adopted on purpose
 # (how: .make/vscode/RELEASING.md)
 OVSX_VERSION = "1.3.0"
+# pinned for the same reason; it only builds the Marketplace VSIX and never sees the token
+VSCE_VERSION = "3.9.2"
 TOKEN_FILE = Path.home() / ".config" / "stm8-toolchain" / "ovsx-token"
 EXTENSION_DIR = Path(".make") / "vscode"  # relative to the repository root
-VSIX = EXTENSION_DIR / "stm8-toolchain.vsix"
+VSIX = EXTENSION_DIR / "stm8-toolchain.vsix"  # made by pack.py, for Open VSX
+MARKETPLACE_VSIX = EXTENSION_DIR / "stm8-toolchain-marketplace.vsix"  # made by vsce, for Microsoft
 MARKETPLACE_URL = "https://marketplace.visualstudio.com/manage/publishers/spseol"
 
 
@@ -65,10 +75,10 @@ class Releaser:
         # the token reaches only the ovsx child, see publish()
         self.env = {key: value for key, value in env.items() if key != TOKEN_VAR}
 
-    def call(self, cmd, env=None):
-        """Run CMD in the repository root; a command that cannot even start gives returncode 127."""
+    def call(self, cmd, env=None, cwd=None):
+        """Run CMD in the repository root (or CWD); a command that cannot even start gives returncode 127."""
         try:
-            return self.run(cmd, cwd=self.root, env=self.env if env is None else env,
+            return self.run(cmd, cwd=self.root if cwd is None else cwd, env=self.env if env is None else env,
                             capture_output=True, text=True)
         except OSError as error:
             return SimpleNamespace(returncode=127, stdout="", stderr=f"{cmd[0]}: {error}")
@@ -148,6 +158,32 @@ class Releaser:
             self.show(result)
             raise Refused("Packing the VSIX failed.")
 
+    def stage_marketplace(self, target):
+        """Copy the files of the extension (the list of pack.py) and the licence into TARGET for vsce."""
+        spec = importlib.util.spec_from_file_location("pack", Path(__file__).resolve().with_name("pack.py"))
+        pack = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(pack)
+        source = self.root / EXTENSION_DIR
+        for item in pack.INCLUDE:
+            if (source / item).is_dir():
+                shutil.copytree(source / item, Path(target) / item)
+            elif (source / item).is_file():
+                shutil.copy2(source / item, Path(target) / item)
+        if (self.root / "LICENSE").is_file():
+            shutil.copy2(self.root / "LICENSE", Path(target) / "LICENSE.txt")
+
+    def pack_marketplace(self):
+        """The VSIX for the Visual Studio Marketplace, built by Microsoft's vsce from a clean copy."""
+        out = (self.root / MARKETPLACE_VSIX).resolve()
+        cmd = ["npx", "--yes", f"@vscode/vsce@{VSCE_VERSION}", "package", "--no-dependencies", "-o", str(out)]
+        with tempfile.TemporaryDirectory() as stage:
+            self.stage_marketplace(stage)
+            print("+", " ".join(cmd))
+            result = self.call(cmd, cwd=stage)
+        if result.returncode != 0:
+            self.show(result)
+            raise Refused("Packing the Marketplace VSIX with vsce failed (it needs Node.js 20 or newer).")
+
     # --- step 6 to 8: publish, tag, push, Microsoft ---------------------------------------------
 
     def publish(self):
@@ -184,7 +220,8 @@ class Releaser:
                           f"{' and '.join(failed)} failed. Retry:\n{self.finish_by_hand(version, tag, failed)}")
 
     def finish(self):
-        print(f"VSIX: {(self.root / VSIX).resolve()}")
+        print(f"VSIX for Open VSX (already published): {(self.root / VSIX).resolve()}")
+        print(f"VSIX for Microsoft (upload this one): {(self.root / MARKETPLACE_VSIX).resolve()}")
         result = self.call(["xdg-open", MARKETPLACE_URL])
         if result.returncode != 0:
             print(f"Warning: could not open {MARKETPLACE_URL}, open it by hand.", file=sys.stderr)
@@ -202,8 +239,10 @@ def release(root, *, dry_run=False, run=subprocess.run, env=os.environ, token_fi
             releaser.check_token()
         releaser.run_tests()
         releaser.pack()
+        releaser.pack_marketplace()
         if dry_run:
-            print(f"VSIX: {(releaser.root / VSIX).resolve()}")
+            print(f"VSIX for Open VSX: {(releaser.root / VSIX).resolve()}")
+            print(f"VSIX for Microsoft: {(releaser.root / MARKETPLACE_VSIX).resolve()}")
             print("Dry run: nothing was published or tagged.")
             return 0
         releaser.publish()
