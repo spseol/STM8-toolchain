@@ -8,7 +8,9 @@ which is used to teach microcontroller programming.
 
 **Before you install the extension, get `stm8-gdb`**: it is a special build of GDB for the STM8
 (*STM8 binutils-gdb*) and it is not part of the extension. Without it nothing can be debugged. Find
-it, with the build instructions, at <https://gitlab.com/spseol/mit-no/stm8-binutils-gdb>.
+it, with the build instructions, at <https://gitlab.com/spseol/mit-no/stm8-binutils-gdb>. It has a
+Debian package and instructions for macOS (Apple Silicon) too. The prebuilt macOS package of the first
+release has no Python, so on macOS build `stm8-gdb` from source with Python for now.
 
 ## What it does
 
@@ -25,10 +27,10 @@ it, with the build instructions, at <https://gitlab.com/spseol/mit-no/stm8-binut
 
 ## Requirements
 
-The extension is tested on Linux. Everything except STM8 binutils-gdb has also been tested on macOS, so
-if you get `stm8-gdb` running on macOS, the extension should work there too (a complete run on macOS is
-still to be confirmed; there is no `lsusb` on macOS, so the ST-Link check is skipped and OpenOCD reports
-a missing board instead). Windows is not supported or tested. You need:
+The extension is tested on Linux. macOS (Apple Silicon) is supported: `stm8-gdb` builds there (see its
+README) and everything else has been tested on macOS. A complete debugging session on macOS with the new
+`stm8-gdb` is still to be confirmed. There is no `lsusb` on macOS, so the ST-Link check is skipped and
+OpenOCD reports a missing board instead. Windows is not supported or tested. You need:
 
 - `make`, `python3` and `git`
 - [SDCC](http://sdcc.sourceforge.net/) (the compiler)
