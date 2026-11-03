@@ -12,9 +12,10 @@ it, with the build instructions, at <https://gitlab.com/spseol/mit-no/stm8-binut
 
 ## What it does
 
-- **Build and flash** the project with a click in the status bar: it runs `make` / `make flash` in
-  a terminal. Compiler errors and warnings appear in the Problems panel when the build is run by
-  `F5` or by the `stm8: build` task (*Terminal > Run Task*).
+- **Build and flash** the project with a click in the status bar: it runs `make` / `make flash` as a
+  task in the terminal panel. When `make` ends successfully, the extension switches back (closes the
+  panel and focuses the editor); see the setting `stm8.afterSuccess`. After an error the terminal stays
+  in front. Compiler errors and warnings appear in the Problems panel.
 - **Debug with `F5`**: the project is built, uploaded to the chip and stopped at `main()`.
   Breakpoints, stepping, variables, CPU registers and the **peripheral registers (SFR)** of your chip
   in the *STM8 Peripherals* view, with a bit-by-bit breakdown and writing of single bits.
@@ -73,6 +74,7 @@ The extension also offers the update when it opens a project with an older toolc
 | setting | default | meaning |
 |:--- |:--- |:- |
 | `stm8.toolchainUrl` | `https://gitlab.com/spseol/mit-no/STM8S-toolchain.git` | Git repository that *Update Toolchain* downloads the toolchain from. It can only be set in your user settings; a project's `.vscode/settings.json` cannot change it, because the downloaded `upgrade.py` is run. |
+| `stm8.afterSuccess` | `hidePanel` | What *Build* and *Flash* in the status bar do when `make` ends with exit code 0: `hidePanel` (close the panel, focus the editor), `editor` (focus the editor, keep the panel), `previousTerminal` (show the terminal that was active before, otherwise the editor) or `stay` (keep the terminal in front). After an error the terminal always stays in front. VS Code cannot tell which tab of the panel (Problems, Output, …) was active, so it cannot return to that. |
 | `stm8.projectsFolder` | *(empty)* | Folder where *New Project* creates your projects. Keep all projects in one folder: they share the SPL library in `../SPLSPL`. Like `stm8.toolchainUrl`, it can only be set in your user settings. |
 
 ## Using it
@@ -99,8 +101,8 @@ Writing to a status register with write-0-to-clear flags (e.g. `TIM4.SR1`) can c
 than the one you meant: the bits are written back as a whole byte.
 
 The Debug Console accepts gdb commands, including `sfr`, `sfr TIM4.CR1`, `p TIM4->CR1`,
-`set var GPIOD->ODR |= 0x10`. The status bar has *Build* (`make` in a terminal), *Flash* (while debugging it restarts the
-session, otherwise `make flash` in the same terminal), *Debug* and the target chip (click to switch, only while not debugging).
+`set var GPIOD->ODR |= 0x10`. The status bar has *Build* (`make` as a task), *Flash* (while debugging it restarts the
+session, otherwise `make flash` as a task), *Debug* and the target chip (click to switch, only while not debugging).
 
 ## When something goes wrong
 

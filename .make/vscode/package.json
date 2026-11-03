@@ -2,7 +2,7 @@
   "name": "stm8-toolchain",
   "displayName": "STM8 Toolchain Debugger",
   "description": "Build, flash and debug STM8S microcontroller projects with SDCC, OpenOCD and stm8-gdb: create a project, press F5, step through code, inspect variables and peripheral registers.",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "publisher": "spseol",
   "license": "GPL-3.0-or-later",
   "icon": "media/icon.png",
@@ -113,6 +113,23 @@
           "default": "https://gitlab.com/spseol/mit-no/STM8S-toolchain.git",
           "scope": "machine",
           "description": "Git repository that STM8: Update Toolchain downloads the current toolchain (.make/) from."
+        },
+        "stm8.afterSuccess": {
+          "type": "string",
+          "enum": [
+            "hidePanel",
+            "editor",
+            "previousTerminal",
+            "stay"
+          ],
+          "enumDescriptions": [
+            "Close the panel and focus the editor.",
+            "Focus the editor, keep the panel open.",
+            "Show the terminal that was active before (otherwise focus the editor).",
+            "Keep the terminal in front (old behaviour)."
+          ],
+          "default": "hidePanel",
+          "description": "What Build and Flash in the status bar do when make ends with exit code 0. On an error the terminal always stays in front."
         },
         "stm8.projectsFolder": {
           "type": "string",

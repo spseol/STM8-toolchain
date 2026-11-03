@@ -46,14 +46,51 @@ function registerStatusBar(vscode, project, { rootOf, onChipChanged }) {
     }
   }
 
-  let terminal;
-  function runInTerminal(command) {
-    // the user may have closed it (trash icon) or the shell may have exited
-    if (!terminal || terminal.exitStatus !== undefined) {
-      terminal = vscode.window.createTerminal({ name: 'STM8', cwd: rootOf() });
+  /** Where to go after make ended with exit code 0 (setting stm8.afterSuccess). previous: the terminal active before. */
+  async function afterSuccess(previous) {
+    const mode = vscode.workspace.getConfiguration('stm8').get('afterSuccess', 'hidePanel');
+    const focusEditor = () => vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+    if (mode === 'hidePanel') {
+      await vscode.commands.executeCommand('workbench.action.closePanel');
+      await focusEditor();
+    } else if (mode === 'editor') {
+      await focusEditor();
+    } else if (mode === 'previousTerminal') {
+      const alive = previous && previous.exitStatus === undefined && vscode.window.terminals.includes(previous);
+      if (alive) previous.show();
+      else await focusEditor();
     }
-    terminal.show();
-    terminal.sendText(command);
+  }
+
+  /**
+   * Runs COMMANDLINE as a task `stm8: NAME` in the project folder. The task gives the exit code
+   * (a terminal with sendText() does not), so a successful run can switch back, see afterSuccess().
+   */
+  async function runTask(name, commandLine) {
+    const root = rootOf();
+    const folder = (vscode.workspace.workspaceFolders || []).find((candidate) => candidate.uri.fsPath === root);
+    const task = new vscode.Task(
+      { type: 'stm8', command: commandLine }, folder || vscode.TaskScope.Workspace, name, 'stm8',
+      new vscode.ShellExecution(commandLine, { cwd: root }),
+      ['$sdcc'], // the same problem matcher as stm8: build (package.json)
+    );
+    task.presentationOptions = {
+      reveal: vscode.TaskRevealKind.Always, focus: true, panel: vscode.TaskPanelKind.Shared, showReuseMessage: false,
+    };
+    const previous = vscode.window.activeTerminal;
+    // only while the task runs: a permanent listener would not be the only one for onDidEndTaskProcess
+    const listener = vscode.tasks.onDidEndTaskProcess((event) => {
+      const ended = event.execution.task;
+      if (ended.source !== 'stm8' || ended.name !== name) return;
+      listener.dispose();
+      if (event.exitCode === 0) afterSuccess(previous).catch((error) => vscode.window.showErrorMessage(error.message));
+    });
+    try {
+      await vscode.tasks.executeTask(task);
+    } catch (error) {
+      listener.dispose();
+      vscode.window.showErrorMessage(error.message);
+    }
   }
 
   async function pickChip() {
@@ -78,12 +115,11 @@ function registerStatusBar(vscode, project, { rootOf, onChipChanged }) {
   }
 
   const commands = [
-    vscode.commands.registerCommand('stm8.build', () => runInTerminal('make')),
+    vscode.commands.registerCommand('stm8.build', () => runTask('make', 'make')),
     vscode.commands.registerCommand('stm8.debug', () => vscode.commands.executeCommand('workbench.action.debug.start')),
     vscode.commands.registerCommand('stm8.flash', () => {
       if (debugging()) return vscode.commands.executeCommand('workbench.action.debug.restart'); // the debugger loads the chip
-      runInTerminal('make flash');
-      return undefined;
+      return runTask('make flash', 'make flash');
     }),
     vscode.commands.registerCommand('stm8.pickChip', pickChip),
   ];

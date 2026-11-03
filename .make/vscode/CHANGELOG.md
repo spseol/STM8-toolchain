@@ -2,6 +2,21 @@
 
 All notable changes to this extension are documented here.
 
+## 0.3.0 03-11-2026
+
+### Added
+
+- Setting `stm8.afterSuccess`: when `make` started by *Build* or *Flash* in the status bar ends with
+  exit code 0, the extension closes the panel and focuses the editor (`hidePanel`, the default),
+  only focuses the editor (`editor`), shows the previously active terminal (`previousTerminal`), or
+  does nothing (`stay`). After an error the terminal stays in front.
+
+### Changed
+
+- *Build* and *Flash* in the status bar run `make` / `make flash` as VS Code tasks (`stm8: make`,
+  `stm8: make flash`) instead of typing the command into a terminal; the exit code is needed for
+  `stm8.afterSuccess`. Compiler errors and warnings now appear in the Problems panel for them too.
+
 ## 0.2.1 01-11-2026
 
 ### Changed
