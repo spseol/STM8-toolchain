@@ -100,6 +100,7 @@ Registry periferií (SFR):
 - Číselná makra ze `sfr.json` (masky, `*_RESET_VALUE`, `*_BaseAddress`) se nadefinují přes `macro define` jako holá čísla. Cast `(uint8_t)` by selhal, protože `uint8_t` v DWARF není.
 - Příkaz `sfr` vypisuje registry s rozpisem bitů. Registry, jejichž čtení maže příznaky (`READ_SIDE_EFFECT`: UARTx.DR, SPI.DR, I2C.DR/SR3, FLASH.IAPSR, AWU.CSR), v přehledu nečte.
 - Pretty-printer `sfr_printer` formátuje `uint8_t` hodnoty na adresách registrů a zvýrazní změnu od minulého zastavení. Epocha roste v `gdb.events.cont`.
+- `set host-charset UTF-8` na začátku gdbinit: bez `LANG` (locale C) by gdb kódoval české texty skriptů do ASCII a `stm8gdb.py` by spadl na `UnicodeEncodeError` (nahlášeno z macOS, reprodukovatelné i na Linuxu přes `env -i`).
 - `set print symbol off` v gdbinit potlačí „Internal error: pc … in read in CU“, které gdb hlásí u ukazatelů na data z DWARF SDCC.
 
 Po `monitor reset halt` je nutné `maintenance flush register-cache`. `monitor reset run` přes gdb hlásí „Protocol error with Rcmd“, proto se používá `reset halt` + `resume`.

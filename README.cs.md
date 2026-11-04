@@ -92,8 +92,8 @@ endif
 K ladění je potřeba `stm8-gdb`: [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb), fork GNU binutils-gdb
 s podporou STM8, verze 15 nebo novější, s podporou Pythonu a Debug Adapter Protocol (DAP; ten potřebuje VS Code).
 Není součástí tohoto toolchainu, nainstaluj ho nejdřív. Repozitář má balíček pro Debian (APT) a postup sestavení
-pro Linux i macOS (Apple Silicon). Hotový balíček pro macOS z prvního vydání nemá Python, takže na macOS si zatím
-`stm8-gdb` přelož ze zdrojů s Pythonem (podrobnosti v jeho README).
+pro Linux i macOS (Apple Silicon). Pro macOS (Apple Silicon) je v jeho [vydáních](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb/-/releases)
+hotový balíček s přibaleným Pythonem (`v15.0.50-stm8.2` nebo novější; starší `v15.0.50-stm8.1` Python nemá).
 
 `make debug` udělá všechno najednou: přeloží projekt s debug informacemi,
 spustí OpenOCD (běží jen po dobu ladění), nahraje program do chipu a zastaví
@@ -171,8 +171,8 @@ Jednotlivé bity takových registrů nejdou měnit (zápis by registr nejdřív 
 
 Potřebuje [`stm8-gdb`](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) 15 nebo novější (není součástí rozšíření, nainstaluj ho nejdřív) a `openocd` v `PATH`,
 stejně jako `make debug`. Rozšíření je testované na Linuxu. Na macOS (Apple Silicon) je otestované vše kromě
-kompletní ladicí relace s novým `stm8-gdb`; samotné `stm8-gdb` se tam přeloží (viz jeho README a poznámka
-o Pythonu výše).
+kompletní ladicí relace s novým `stm8-gdb` na čipu; samotné `stm8-gdb` s Pythonem a DAP tam běží (hotový balíček,
+viz výše).
 
 #### Aktualizace toolchainu
 

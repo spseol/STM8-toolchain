@@ -2,6 +2,21 @@
 
 All notable changes to this extension are documented here.
 
+## 0.3.1 04-11-2026
+
+### Changed
+
+- README: macOS (Apple Silicon) is supported. The release `v15.0.50-stm8.2` of STM8 binutils-gdb has a
+  prebuilt macOS package of `stm8-gdb` with Python and DAP bundled; a complete debugging session on a
+  Mac with a chip is still to be confirmed.
+
+### Fixed
+
+- `stm8-gdb` started without `LANG` (locale C, for example by a program started from the macOS GUI)
+  stopped with `UnicodeEncodeError` while loading `.make/stm8gdb.py`. `.make/gdbinit` now sets
+  `host-charset` to UTF-8. The fix is in the toolchain, not in the extension: a project gets it with
+  `STM8: Update Toolchain`.
+
 ## 0.3.0 03-11-2026
 
 ### Added

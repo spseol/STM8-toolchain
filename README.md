@@ -90,8 +90,9 @@ endif
 Debugging needs `stm8-gdb`: [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb), a fork of GNU binutils-gdb
 with STM8 support, version 15 or newer, with Python and Debug Adapter Protocol (DAP) support (the DAP is needed
 for VS Code). It is not part of this toolchain: install it first. The repository has a Debian package
-(APT) and the build instructions for Linux and macOS (Apple Silicon). Its prebuilt macOS package of the first
-release has no Python, so on macOS build `stm8-gdb` from source with Python for now (details in its README).
+(APT) and the build instructions for Linux and macOS (Apple Silicon). For macOS (Apple Silicon) there is a
+prebuilt package with Python bundled in its [releases](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb/-/releases)
+(`v15.0.50-stm8.2` or newer; the older `v15.0.50-stm8.1` has no Python).
 
 `make debug` does everything at once: it builds the project with debug info,
 starts OpenOCD (it runs only while debugging), uploads the program to the chip
@@ -173,8 +174,8 @@ has *Build*, *Flash*, *Debug* and the target chip (click it to switch). Details 
 
 It needs [`stm8-gdb`](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) 15 or newer (it is not part of the extension, install it first) and `openocd`
 in `PATH`, as `make debug` does. The extension is tested on Linux. On macOS (Apple Silicon) everything has been
-tested except a complete debugging session with the new `stm8-gdb`; `stm8-gdb` itself builds there
-(see its README, including the Python note above).
+tested except a complete debugging session with the new `stm8-gdb` on a chip; `stm8-gdb` itself, with Python and
+DAP, runs there (prebuilt package, see above).
 
 #### Updating the toolchain
 

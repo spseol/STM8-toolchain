@@ -2,6 +2,11 @@
 # Načítá ji `make debug` (cgdb) a `make gdb` (TUI) přes `-x .make/gdbinit`,
 # takže nevadí auto-load safe-path (lokální .gdbinit by gdb odmítl).
 
+# Bez LANG (locale C: env -i, některé programy spuštěné z GUI na macOS) by gdb
+# kódoval české texty ze skriptů níže do ASCII a stm8gdb.py by spadl na
+# UnicodeEncodeError. Musí být před `source`.
+set host-charset UTF-8
+
 set style enabled on
 set print pretty on
 set print array-indexes on
