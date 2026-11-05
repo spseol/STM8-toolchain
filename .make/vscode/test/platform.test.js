@@ -1,7 +1,11 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { PYTHON, pathKey, gitUsrBin, toolEnv, taskEnv } = require('../src/platform');
+const { PYTHON, GDB_PYTHON_ENV, pathKey, gitUsrBin, toolEnv, taskEnv } = require('../src/platform');
+
+test('gdb_python_runs_in_utf8_mode_only_on_windows', () => {
+  assert.deepStrictEqual(GDB_PYTHON_ENV, process.platform === 'win32' ? { PYTHONUTF8: '1' } : {});
+});
 
 const GIT = 'C:\\Program Files\\Git';
 const BASH = `${GIT}\\usr\\bin\\bash.exe`;

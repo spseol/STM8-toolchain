@@ -125,9 +125,14 @@ def generate(cc, cflags, objcopy, out_elf):
                 f.write(f"#undef {name}\n__at({base}) {typ}_TypeDef {name};\n")
         rel = os.path.join(tmp, "sfr.rel")
         elf = os.path.join(tmp, "sfr.elf")
-        run([cc, *cflags, "--debug", "--out-fmt-elf", "-c", src, "-o", rel])
+        # Windows: cesta ke zdroji po zpětných lomítkách (C:\Users\...\Temp\tmpXXXX\sfr.c) se zapíše do
+        # ladicích informací SDCC a poškodí je (gdb: "Dwarf Error: Could not find abbrev number");
+        # s lomítky dopředu je ELF v pořádku
+        src_arg, rel_arg, elf_arg = (p.replace("\\", "/") if os.name == "nt" else p
+                                     for p in (src, rel, elf))
+        run([cc, *cflags, "--debug", "--out-fmt-elf", "-c", src_arg, "-o", rel_arg])
         # bez main a bez knihoven: v ELF jsou jen ladicí informace
-        run([cc, "-mstm8", "--debug", "--out-fmt-elf", "--nostdlib", rel, "-o", elf])
+        run([cc, "-mstm8", "--debug", "--out-fmt-elf", "--nostdlib", rel_arg, "-o", elf_arg])
         if not os.path.isfile(elf):
             raise RuntimeError("SDCC nevytvořil sfr.elf")
         # symboly ELF jsou na adresách SFR typu FUNC, gdb stačí DWARF

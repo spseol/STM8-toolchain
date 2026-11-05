@@ -9,6 +9,13 @@ const path = require('node:path');
  */
 const PYTHON = process.platform === 'win32' ? 'python' : 'python3';
 
+/**
+ * Environment of the Python inside stm8-gdb. Windows: its default text encoding is the ANSI code page (cp1250), but the
+ * text of the scripts is UTF-8, so the Debug Console showed "periferiĂ­" instead of "periferií". UTF-8 mode fixes it.
+ * Linux and macOS use UTF-8 already, so nothing is added there.
+ */
+const GDB_PYTHON_ENV = process.platform === 'win32' ? { PYTHONUTF8: '1' } : {};
+
 /** Name of the PATH variable in ENV: on Windows it is usually `Path`, and a copy of process.env is case sensitive. */
 function pathKey(env) {
   return Object.keys(env).find((key) => key.toUpperCase() === 'PATH') || 'PATH';
@@ -61,4 +68,4 @@ function taskEnv(env = process.env, options = {}) {
   return changed[key] === env[key] ? {} : { [key]: changed[key] };
 }
 
-module.exports = { PYTHON, pathKey, gitUsrBin, toolEnv, taskEnv };
+module.exports = { PYTHON, GDB_PYTHON_ENV, pathKey, gitUsrBin, toolEnv, taskEnv };
