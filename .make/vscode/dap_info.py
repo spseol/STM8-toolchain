@@ -16,10 +16,16 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     log = os.path.abspath(args.log)
-    # same command as connect() in stm8gdb.py; gdb runs it through sh, so the log path is quoted
+    # same command as pipe_target() in stm8gdb.py. Linux, macOS: gdb runs it through sh, so the log
+    # path is quoted for sh. Windows: no shell, so `2>` would reach OpenOCD as an argument; its own
+    # `-l` is used instead, and gdb splits the arguments itself (backslash escapes), hence `/`.
+    if os.name == "nt":
+        redirect = '-l "' + log.replace("\\", "/") + '"'
+    else:
+        redirect = "2>" + shlex.quote(log)
     target = (
         f'| {args.openocd} -c "gdb_port pipe" -c "telnet_port disabled"'
-        f' -c "tcl_port disabled" 2>{shlex.quote(log)}'
+        f' -c "tcl_port disabled" {redirect}'
     )
     info = {
         "device": args.device,

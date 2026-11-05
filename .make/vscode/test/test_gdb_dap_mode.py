@@ -123,13 +123,20 @@ def test_cgdb_regression():
 
 
 def test_connect_string_quotes_the_log_path():
-    """The fallback connect() of the DAP mode gets an absolute log path; the shell must see it as one word."""
+    """The fallback connect() of the DAP mode gets an absolute log path; it must stay one word.
+    Linux, macOS: the shell sees `2>LOG`. Windows: no shell, OpenOCD gets `-l "LOG"` with slashes."""
+    import os
     import shlex
 
-    proc = gdb_batch(["python print(pipe_target('openocd -f x', '/tmp/Žák Novák/o.log'))"])
+    log = "C:\\Users\\Žák Novák\\o.log" if os.name == "nt" else "/tmp/Žák Novák/o.log"
+    proc = gdb_batch([f"python print(pipe_target('openocd -f x', {log!r}))"])
     target = proc.stdout.strip().splitlines()[-1]
     assert target.startswith("| openocd -f x ")
-    assert shlex.split(target[2:])[-1] == "2>/tmp/Žák Novák/o.log"
+    if os.name == "nt":
+        assert target.endswith(' -l "C:/Users/Žák Novák/o.log"')
+        assert "2>" not in target
+    else:
+        assert shlex.split(target[2:])[-1] == "2>/tmp/Žák Novák/o.log"
 
 
 def test_connect_string_equals_dap_info_target():
