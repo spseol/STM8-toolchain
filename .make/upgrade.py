@@ -392,6 +392,20 @@ def _summary(report):
     return lines
 
 
+def _use_color():
+    """Color in a terminal. stdin is checked as well as stderr: `make -Otarget -jN` (the toolchain
+    Makefile sets it) makes stderr a pipe even in a terminal, but stdin stays the terminal. Under the
+    VS Code extension both are pipes, so its messages stay plain."""
+    if os.environ.get("NO_COLOR") or os.environ.get("TERM") == "dumb":
+        return False
+    return sys.stderr.isatty() or sys.stdin.isatty()
+
+
+def _error(text):
+    """Print TEXT as an error on stderr, red in a terminal."""
+    print(f"\033[1;31m{text}\033[0m" if _use_color() else text, file=sys.stderr)
+
+
 def main(argv):
     parser = argparse.ArgumentParser(description="Upgrade the project to the current STM8S toolchain.")
     parser.add_argument("ref", help="git ref with the fetched toolchain, e.g. FETCH_HEAD")
@@ -409,11 +423,11 @@ def main(argv):
                 return 3
             report = upgrade(project, args.ref, _ask_switch(need.variant))
     except Refused as err:
-        print(err, file=sys.stderr)
+        _error(str(err))
         return 1
     except Exception as err:  # OSError, UnicodeError, ...: say what to do instead of a traceback
-        print(f"Update failed: {err}. .make/ may be partly updated; `git status` shows what changed and "
-              "`git checkout .make Makefile .vscode/launch.json` restores it.", file=sys.stderr)
+        _error(f"Update failed: {err}. .make/ may be partly updated; `git status` shows what changed and "
+               "`git checkout .make Makefile .vscode/launch.json` restores it.")
         return 1
     print("\n".join(_summary(report)))
     if args.json:

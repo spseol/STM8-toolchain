@@ -558,6 +558,8 @@ def test_main_exit_codes_and_json(tmp_path, monkeypatch, capsys):
     assert code == 1
     assert "uncommitted" in err
 
+    assert "\x1b" not in err  # pipes (pytest, the extension): no color
+
     conflict = prepared(tmp_path / "conflict")
     with open(conflict / "Makefile", "a") as handle:
         handle.write("MY_OWN_LINE=1\n")
@@ -708,3 +710,23 @@ def test_upgrade_with_pruned_paths_is_idempotent(tmp_path):
     assert second.replaced == 0
     assert second.removed == 0
     assert git(project, "status", "--porcelain") == ""
+
+
+@pytest.mark.parametrize("stdin_tty, stderr_tty, term, no_color, expected", [
+    (True, False, "xterm", None, True),    # make -Otarget -jN: stderr is a pipe, stdin the terminal
+    (False, True, "xterm", None, True),
+    (False, False, "xterm", None, False),  # extension, pipes
+    (True, True, "dumb", None, False),
+    (True, True, "xterm", "1", False),     # NO_COLOR
+])
+def test_error_is_red_only_in_a_terminal(monkeypatch, capsys, stdin_tty, stderr_tty, term, no_color, expected):
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: stdin_tty, raising=False)
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: stderr_tty, raising=False)
+    monkeypatch.setenv("TERM", term)
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    if no_color:
+        monkeypatch.setenv("NO_COLOR", no_color)
+    upgrade._error("Commit or discard them first")
+    err = capsys.readouterr().err
+    assert ("\x1b[1;31m" in err) is expected
+    assert "Commit or discard them first" in err
