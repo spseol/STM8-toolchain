@@ -12,6 +12,12 @@ All notable changes to this extension are documented here.
 - Windows: `make` is run with `<Git>\usr\bin` first in `PATH` (build tasks, project info, chip switch, New
   Project), so that an editor started from the Start menu finds `bash` of Git for Windows. Without it
   `make` complains about `No rule to make target '../SPLSPL/mk/.mk'`.
+- Windows: the peripheral registers load in the Debug Console session. `add-symbol-file` got a path with
+  backslashes, which gdb takes as escapes ("Registry periferií nejsou k dispozici"), and `sfr_gen.py` passed a
+  source path with backslashes to SDCC, which damages the debug information of `sfr.elf` ("Dwarf Error: Could
+  not find abbrev number"). Both paths use `/` now.
+- Windows: Czech letters in the Debug Console ("periferiĂ­" instead of "periferií"): gdb runs with
+  `PYTHONUTF8=1`.
 - "Old toolchain" is reported only when the target `dap-info` is missing. Another "No rule to make target"
   is shown as an error of make (with a hint when bash is missing), so Update Toolchain is no longer offered
   for a problem it cannot fix.

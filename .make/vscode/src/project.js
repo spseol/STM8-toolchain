@@ -5,7 +5,7 @@ const { execFile, spawn } = require('node:child_process');
 const { promisify } = require('node:util');
 
 const { parse } = require('./sfrmodel');
-const { PYTHON, toolEnv } = require('./platform');
+const { PYTHON, GDB_PYTHON_ENV, toolEnv } = require('./platform');
 
 const run = promisify(execFile);
 
@@ -199,6 +199,7 @@ function spawnGdb(info, cwd) {
     cwd,
     env: {
       ...process.env,
+      ...GDB_PYTHON_ENV,
       STM8_UI: 'dap',
       STM8_OPENOCD: info.openocd,
       STM8_OPENOCD_LOG: info.openocdLog,

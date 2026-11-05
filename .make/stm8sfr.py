@@ -92,7 +92,10 @@ def load_sfr():
     try:
         with open(os.path.splitext(path)[0] + ".json") as f:
             info = json.load(f)
-        gdb.execute(f'add-symbol-file "{path}"', to_string=True)
+        # Windows: gdb bere v uvozovkách zpětné lomítko jako únikový znak (C:\Users → C:Users),
+        # rozšíření dává absolutní cestu s \, proto /
+        gdb_path = path.replace("\\", "/") if os.name == "nt" else path
+        gdb.execute(f'add-symbol-file "{gdb_path}"', to_string=True)
     except (OSError, ValueError, gdb.error):
         warn("Registry periferií nejsou k dispozici (chybí sfr.elf). Spusť ladění přes make debug.")
         return
