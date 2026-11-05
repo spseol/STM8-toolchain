@@ -5,6 +5,7 @@ const { execFile, spawn } = require('node:child_process');
 const { promisify } = require('node:util');
 
 const { parse } = require('./sfrmodel');
+const { PYTHON, toolEnv } = require('./platform');
 
 const run = promisify(execFile);
 
@@ -38,14 +39,22 @@ async function readProjectInfo(cwd, { exec = run } = {}) {
   try {
     ({ stdout } = await exec('make', ['-s', '--no-print-directory', 'dap-info'], {
       cwd,
-      env: { ...process.env, LC_ALL: 'C' }, // make's messages are matched in English
+      env: { ...toolEnv(), LC_ALL: 'C' }, // make's messages are matched in English
     }));
   } catch (error) {
     const text = `${error.stderr || ''}${error.message || ''}`;
-    if (/No rule to make target/.test(text)) {
+    // only the missing target dap-info means an old toolchain; any other "No rule to make target" is something else
+    // (without bash, Windows make does not know the chip and complains about ../SPLSPL/mk/.mk)
+    if (/No rule to make target ['`‘"]?dap-info/.test(text)) {
       throw new ToolchainError(
         'Old toolchain – run STM8: Update Toolchain (or update .make/ by hand and add the line -include .make/vscode.mk to Makefile)',
         { fix: 'updateToolchain' },
+      );
+    }
+    if (/CreateProcess\(NULL, (bash|nproc|sh)\b/.test(text)) {
+      throw new ToolchainError(
+        'make cannot find bash. Install Git for Windows (https://git-scm.com) and restart the editor, '
+        + 'or add its usr\\bin folder (C:\\Program Files\\Git\\usr\\bin) to PATH.',
       );
     }
     if (/no makefile found/i.test(text)) {
@@ -149,7 +158,7 @@ async function loadSfrModel(info, cwd, { exec = run } = {}) {
 
 /** Chips the toolchain can build: { family: { CHIP: datasheet } } (`.make/devices.py`). */
 async function listChips(cwd, { exec = run } = {}) {
-  const { stdout } = await exec('python3', ['.make/devices.py'], { cwd });
+  const { stdout } = await exec(PYTHON, ['.make/devices.py'], { cwd });
   return JSON.parse(stdout);
 }
 
@@ -158,7 +167,7 @@ async function switchChip(cwd, chip, { exec = run } = {}) {
   try {
     await exec('make', ['-s', '--no-print-directory', 'switch-device', `CHIP=${chip}`], {
       cwd,
-      env: { ...process.env, LC_ALL: 'C' },
+      env: { ...toolEnv(), LC_ALL: 'C' },
     });
   } catch (error) {
     throw new ToolchainError(`Cannot switch to ${chip}: ${(error.stderr || error.message).trim()}`);

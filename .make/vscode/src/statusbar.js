@@ -1,5 +1,7 @@
 'use strict';
 
+const { shellOptions } = require('./tasks');
+
 const SEPARATOR = -1; // vscode.QuickPickItemKind.Separator
 
 /** QuickPick items: a separator per family, then its chips; the current chip is preselected. */
@@ -71,7 +73,7 @@ function registerStatusBar(vscode, project, { rootOf, onChipChanged }) {
     const folder = (vscode.workspace.workspaceFolders || []).find((candidate) => candidate.uri.fsPath === root);
     const task = new vscode.Task(
       { type: 'stm8', command: commandLine }, folder || vscode.TaskScope.Workspace, name, 'stm8',
-      new vscode.ShellExecution(commandLine, { cwd: root }),
+      new vscode.ShellExecution(commandLine, shellOptions(root)),
       ['$sdcc'], // the same problem matcher as stm8: build (package.json)
     );
     task.presentationOptions = {
