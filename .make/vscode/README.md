@@ -28,8 +28,10 @@ Debian package and a prebuilt package for macOS (Apple Silicon) with Python bund
 ## Requirements
 
 The extension is tested on Linux. macOS (Apple Silicon) is supported: there is a prebuilt `stm8-gdb`
-with Python and DAP, and everything else has been tested on macOS. A complete debugging session on
-macOS with a chip is still to be confirmed. There is no `lsusb` on macOS, so the ST-Link check is skipped and
+with Python and DAP, and a complete session (build, flash, debugging in the extension) has been verified
+on a Mac with a Nucleo-STM8S208RB (OpenOCD and SDCC from Homebrew). `stm8-gdb` and `openocd` must be
+in the `PATH` of the program that starts the editor, so start VS Code / VSCodium from a terminal
+(`code .`), not from the Dock. There is no `lsusb` on macOS, so the ST-Link check is skipped and
 OpenOCD reports a missing board instead. Windows is not supported or tested. You need:
 
 - `make`, `python3` and `git`
@@ -111,7 +113,7 @@ session, otherwise `make flash` as a task), *Debug* and the target chip (click t
 | message | what to do |
 |:--- |:- |
 | `Old toolchain – run STM8: Update Toolchain …` | the project has no `.make/vscode.mk`: run *STM8: Update Toolchain* (or copy `.make/` from a current toolchain by hand and add `-include .make/vscode.mk` as the last line of `Makefile`) |
-| `stm8-gdb 15 or newer is required` / `not found in PATH` | install the STM8 binutils-gdb build with Python and DAP support |
+| `stm8-gdb 15 or newer is required` / `not found in PATH` | install the STM8 binutils-gdb build with Python and DAP support; on macOS also start VS Code / VSCodium from a terminal (`code .`), a program started from the Dock does not see the `PATH` of your shell |
 | `No ST-Link found on USB` | connect the board; on Linux check the udev rules |
 | `make debug is running (PID …)` | close the cgdb session, one debugger at a time |
 | `ST-Link may be in use by another OpenOCD …` | stop the other OpenOCD (`make openocd`, another editor window) |

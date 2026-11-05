@@ -1,8 +1,10 @@
 SHELL := /bin/bash
 #MAKEFLAGS := --jobs=1
-MAKEFLAGS := --jobs=$(shell nproc --ignore 1)
+# počet jader: nproc (Linux), sysctl (macOS nemá nproc), getconf
+NPROC := $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
+MAKEFLAGS := --jobs=$(shell n=$(NPROC); if [ "$$n" -gt 1 ]; then echo $$((n-1)); else echo 1; fi)
 MAKEFLAGS += --output-sync=target
-MAKEFLAGS += --load-average=$(shell nproc)
+MAKEFLAGS += --load-average=$(NPROC)
 ######################################################
 #         Makefile pro čísté SDCC
 ######################################################
