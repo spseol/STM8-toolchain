@@ -2,6 +2,25 @@
 
 All notable changes to this extension are documented here.
 
+## 0.3.3 05-11-2026
+
+### Fixed
+
+- Windows: the extension runs `python`, not `python3`. The `python3.exe` in `WindowsApps` is only a stub for
+  the Microsoft Store and exits with code 9009, which Update Toolchain reported as "failed (code 9009)".
+  An exit code of `upgrade.py` other than 0 to 3 is now an error with an explanation, not a success.
+- Windows: `make` is run with `<Git>\usr\bin` first in `PATH` (build tasks, project info, chip switch, New
+  Project), so that an editor started from the Start menu finds `bash` of Git for Windows. Without it
+  `make` complains about `No rule to make target '../SPLSPL/mk/.mk'`.
+- "Old toolchain" is reported only when the target `dap-info` is missing. Another "No rule to make target"
+  is shown as an error of make (with a hint when bash is missing), so Update Toolchain is no longer offered
+  for a problem it cannot fix.
+
+### Changed
+
+- The version is 0.3.3 so that a development build installed by `make vscode` is newer than the published
+  one and the editor does not replace it with the version from the marketplace at start.
+
 ## 0.3.1 04-11-2026
 
 ### Changed
