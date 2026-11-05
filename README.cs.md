@@ -79,7 +79,7 @@ endif
 | `make cgdb` | totéž co `make debug` |
 | `make gdb` | totéž, ale v STM8-gdb TUI módu |
 | `make openocd` | spustí samostatný OpenOCD na portu 3333 (pro ruční připojení; `make debug` ho nepotřebuje) |
-| `make miniterm` | spustí sériový terminál (pyserial-miniterm) na prvním `/dev/ttyUSB*`/`/dev/ttyACM*`, rychlost zjistí z projektu (`UARTx_Init()` nebo zápis do BRR registrů), ručně `BAUD=`, jinak 115200; alias `make pyserial` |
+| `make miniterm` | spustí sériový terminál (pyserial-miniterm) na prvním `/dev/ttyUSB*`/`/dev/ttyACM*`, rychlost zjistí z projektu (`UARTx_Init()` nebo zápis do BRR registrů), ručně `BAUD=`, jinak 115200; alias `make pyserial`. Spolehlivě funguje jen v Linuxu (v macOS mají porty jiná jména, použij `pyserial-miniterm` ručně) |
 | `make baudrate` | vypíše baud rate zjištěný z projektu a odkud ho vzal |
 | `make switch-device` | interaktivně přepne cílový čip v Makefile |
 | `make lib` | interaktivně vybere drivery z `lib/` a přesune je do `src/` a `inc/` |
@@ -170,9 +170,10 @@ Jednotlivé bity takových registrů nejdou měnit (zápis by registr nejdřív 
 [`.make/vscode/README.md`](.make/vscode/README.md).
 
 Potřebuje [`stm8-gdb`](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) 15 nebo novější (není součástí rozšíření, nainstaluj ho nejdřív) a `openocd` v `PATH`,
-stejně jako `make debug`. Rozšíření je testované na Linuxu. Na macOS (Apple Silicon) je otestované vše kromě
-kompletní ladicí relace s novým `stm8-gdb` na čipu; samotné `stm8-gdb` s Pythonem a DAP tam běží (hotový balíček,
-viz výše).
+stejně jako `make debug`. Rozšíření je testované na Linuxu. Na macOS (Apple Silicon) je ověřené s Nucleo-STM8S208RB:
+`make`, `make flash`, `make cgdb` a ladění v rozšíření (`stm8-gdb` z hotového balíčku, OpenOCD a SDCC z Homebrew).
+`stm8-gdb` a `openocd` musí být v `PATH` programu, který editor spouští: VS Code / VSCodium spouštěj z terminálu
+(`code .`), ne z Docku, ten `PATH` tvého shellu nevidí.
 
 #### Aktualizace toolchainu
 

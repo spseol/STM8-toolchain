@@ -24,7 +24,7 @@ Supports Linux, Windows, and macOS.
 * The Standard Peripheral Library [SPL](https://www.st.com/content/st_com/en/products/embedded-software/mcu-mpu-embedded-software/stm8-embedded-software/stsw-stm8069.html)
   *should* (for licensing reasons) be downloaded separately from the manufacturer's website and use the
   [patch](https://github.com/gicking/STM8-SPL_SDCC_patch). But I think if you run
-  `make spl` it won't be a sin.
+  `make spl` it won't be a sin. The first `make` runs it by itself, so it needs an internet connection.
 * Competition and inspiration:
   * <https://gitlab.com/wykys/stm8-tools>
   * <https://github.com/matejkrenek/stm8-toolchain>
@@ -77,7 +77,7 @@ endif
 | `make vscode` | installs the debugger extension into VS Code / VSCodium (once per computer), see [VS Code](#vs-code--vscodium) |
 | `make gdb` | same, but in STM8-gdb TUI mode |
 | `make openocd` | starts a standalone OpenOCD on port 3333 (for manual connection; `make debug` does not need it) |
-| `make miniterm` | starts serial terminal (pyserial-miniterm) on the first `/dev/ttyUSB*`/`/dev/ttyACM*`, speed detected from the project (`UARTx_Init()` or BRR register writes), override with `BAUD=`, default 115200; alias `make pyserial` |
+| `make miniterm` | starts serial terminal (pyserial-miniterm) on the first `/dev/ttyUSB*`/`/dev/ttyACM*`, speed detected from the project (`UARTx_Init()` or BRR register writes), override with `BAUD=`, default 115200; alias `make pyserial`. Works reliably only on Linux (on macOS the ports have other names, use `pyserial-miniterm` by hand) |
 | `make baudrate` | prints the baud rate detected from the project and where it was found |
 | `make switch-device` | interactively switches target device in Makefile |
 | `make lib` | interactively selects drivers from `lib/` and moves them to `src/` and `inc/` |
@@ -173,9 +173,10 @@ has *Build*, *Flash*, *Debug* and the target chip (click it to switch). Details 
 [`.make/vscode/README.md`](.make/vscode/README.md).
 
 It needs [`stm8-gdb`](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) 15 or newer (it is not part of the extension, install it first) and `openocd`
-in `PATH`, as `make debug` does. The extension is tested on Linux. On macOS (Apple Silicon) everything has been
-tested except a complete debugging session with the new `stm8-gdb` on a chip; `stm8-gdb` itself, with Python and
-DAP, runs there (prebuilt package, see above).
+in `PATH`, as `make debug` does. The extension is tested on Linux. On macOS (Apple Silicon) it has been verified with a
+Nucleo-STM8S208RB: `make`, `make flash`, `make cgdb` and debugging in the extension (`stm8-gdb` from the prebuilt package,
+OpenOCD and SDCC from Homebrew). `stm8-gdb` and `openocd` must be in the `PATH` of the program that starts the
+editor: start VS Code / VSCodium from a terminal (`code .`), not from the Dock, which does not see the `PATH` of your shell.
 
 #### Updating the toolchain
 

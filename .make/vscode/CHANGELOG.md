@@ -7,8 +7,9 @@ All notable changes to this extension are documented here.
 ### Changed
 
 - README: macOS (Apple Silicon) is supported. The release `v15.0.50-stm8.2` of STM8 binutils-gdb has a
-  prebuilt macOS package of `stm8-gdb` with Python and DAP bundled; a complete debugging session on a
-  Mac with a chip is still to be confirmed.
+  prebuilt macOS package of `stm8-gdb` with Python and DAP bundled. A complete session (build, flash,
+  debugging in the extension) is verified on a Mac with a Nucleo-STM8S208RB; the editor has to be started
+  from a terminal so that it sees `stm8-gdb` and `openocd` in `PATH`.
 
 ### Fixed
 
