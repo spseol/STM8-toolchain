@@ -2,6 +2,8 @@
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 
+const { PYTHON } = require('./platform');
+
 const run = promisify(execFile);
 const MAX_BUFFER = 16 * 1024 * 1024; // the script source is ~15 kB, the summary is short
 
@@ -36,14 +38,20 @@ async function runUpgrade(root, { url, switchChoice, exec = run } = {}) {
   let stdout;
   let stderr = '';
   try {
-    ({ stdout } = await exec('python3', args, options));
+    ({ stdout } = await exec(PYTHON, args, options));
   } catch (error) {
-    if (typeof error.code !== 'number') return { code: 1, output: `Cannot run python3: ${message(error)}` };
+    if (typeof error.code !== 'number') return { code: 1, output: `Cannot run ${PYTHON}: ${message(error)}` };
     ({ code } = error);
     stdout = error.stdout || '';
     stderr = error.stderr || '';
   }
 
+  // upgrade.py ends only with 0, 1, 2 or 3; anything else is the interpreter or the shell (Windows: 9009 = the
+  // Microsoft Store stub of python.exe or python3.exe, "command not found")
+  if (![0, 1, 2, 3].includes(code)) {
+    const detail = stderr.trim() || String(stdout).trim();
+    return { code: 1, output: `Update Toolchain failed: ${PYTHON} exited with code ${code}${detail ? `: ${detail}` : ''}` };
+  }
   const lines = String(stdout).trimEnd().split('\n');
   if (code === 3) {
     try {

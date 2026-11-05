@@ -5,6 +5,7 @@ const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const { ToolchainError } = require('./project');
+const { toolEnv } = require('./platform');
 
 const run = promisify(execFile);
 const MAX_BUFFER = 16 * 1024 * 1024;
@@ -103,7 +104,8 @@ async function createProject({ url, parent, name, mediaDir, exec = run }) {
   const dir = path.join(parent, title);
   if (path.dirname(path.resolve(dir)) !== path.resolve(parent)) throw new ToolchainError(`${dir} is not directly inside ${parent}.`);
 
-  const options = { maxBuffer: MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } };
+  // toolEnv(): on Windows PATH with Git's bash, which `make compile_commands.json` below needs
+  const options = { maxBuffer: MAX_BUFFER, env: { ...toolEnv(), GIT_TERMINAL_PROMPT: '0' } };
   try {
     // `--`: a url that starts with - is then a repository, never an option
     await exec('git', ['clone', '--', url, dir], options);
