@@ -559,6 +559,8 @@ def test_main_exit_codes_and_json(tmp_path, monkeypatch, capsys):
     assert "uncommitted" in err
 
     assert "\x1b" not in err  # pipes (pytest, the extension): no color
+    for command in ("git add", "git commit", "git stash push", "git restore"):
+        assert command in err
 
     conflict = prepared(tmp_path / "conflict")
     with open(conflict / "Makefile", "a") as handle:
@@ -730,3 +732,18 @@ def test_error_is_red_only_in_a_terminal(monkeypatch, capsys, stdin_tty, stderr_
     err = capsys.readouterr().err
     assert ("\x1b[1;31m" in err) is expected
     assert "Commit or discard them first" in err
+
+
+def test_dirty_hint_names_only_the_changed_guarded_paths():
+    # the first line of `git status --porcelain` has lost its leading space (the output is stripped)
+    hint = upgrade._dirty_hint('M .make/vscode.mk\n M Makefile\n?? .make/new.txt')
+    assert "git add .make Makefile &&" in hint
+    assert "git stash push -u -- .make Makefile" in hint
+    assert "git restore .make Makefile" in hint
+    assert "marked ??" in hint  # new files are not removed by git restore
+    assert ".vscode/launch.json" not in hint  # a pathspec that matches nothing would make git fail
+
+    only_launch = upgrade._dirty_hint("M .vscode/launch.json")
+    assert "git restore .vscode/launch.json" in only_launch
+    assert ".make" not in only_launch
+    assert "marked ??" not in only_launch

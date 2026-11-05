@@ -92,7 +92,19 @@ def check_project(project):
     changed = _git(project, "status", "--porcelain", "--", *GUARDED_PATHS).strip()
     if changed:
         raise Refused("There are uncommitted changes in .make, Makefile or .vscode/launch.json. "
-                      f"Commit or discard them first:\n{changed}")
+                      f"Commit or discard them first:\n{changed}\n\n{_dirty_hint(changed)}")
+
+
+def _dirty_hint(changed):
+    """What to do with the changes in `git status --porcelain` output CHANGED: git commands limited
+    to the guarded paths that really changed (a pathspec that matches nothing makes git fail), so
+    other work of the project is never touched."""
+    names = [line.split(None, 1)[1].strip('"') for line in changed.splitlines() if " " in line]
+    paths = " ".join(g for g in GUARDED_PATHS if any(n == g or n.startswith(g + "/") for n in names))
+    return (f"Keep them:     git add {paths} && git commit -m \"my changes in the toolchain files\"\n"
+            f"Put them away: git stash push -u -- {paths}     (bring them back later with: git stash pop)\n"
+            f"Throw them away (they are lost!): git restore {paths}"
+            + ("   and delete the new files marked ??" if any(line.startswith("??") for line in changed.splitlines()) else ""))
 
 
 @dataclass
