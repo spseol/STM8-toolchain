@@ -259,9 +259,12 @@ endif
 
 ifeq ($(wildcard $(SPLLIB_ELF)),)
 $(SPLLIB_ELF): $(SPL_OBJECTS_ELF) | $(OUTPUT_SPL_DIR_ELF)
-	@echo $(SPL_OBJECTS_ELF) > objects.list
+	@rm -f objects.list
+	@for prefix in $(SPL_SOURCE_PREFIX); do \
+         ls $(OUTPUT_SPL_DIR_ELF)/$$prefix*.rel >> objects.list; \
+    done;
 	$(AR) -rc $(SPLLIB_ELF) @objects.list
-	@rm objects.list
+	@rm -f objects.list
 endif
 
 
