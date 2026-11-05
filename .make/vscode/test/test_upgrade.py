@@ -747,3 +747,43 @@ def test_dirty_hint_names_only_the_changed_guarded_paths():
     assert "git restore .vscode/launch.json" in only_launch
     assert ".make" not in only_launch
     assert "marked ??" not in only_launch
+
+
+def test_next_steps_fit_what_the_update_did():
+    plain = upgrade._next_steps(upgrade.Report(replaced=3, makefile="merged", launch="replaced"))
+    text = "\n".join(plain)
+    assert text.startswith("What to do now:")
+    assert "git diff -- Makefile" in text and "make" in text
+    assert 'git add .make Makefile .vscode/launch.json && git commit' in text
+    assert "git restore .make Makefile .vscode/launch.json && git clean -fd -- .make" in text
+    assert "Resolve the conflict" not in text and ".gitignore" not in text
+
+    conflict = "\n".join(upgrade._next_steps(upgrade.Report(makefile="conflict", launch="replaced",
+                                                           gitignore_added=[".debug-display"])))
+    assert "Resolve the conflict in Makefile" in conflict
+    assert "git add .make Makefile .vscode/launch.json .gitignore" in conflict
+    assert "git restore .make Makefile .vscode/launch.json .gitignore" in conflict
+
+    # the original launch.json was not tracked: git restore cannot bring it back, mv does
+    saved = "\n".join(upgrade._next_steps(upgrade.Report(launch="replaced", backup=".vscode/launch.json.bak")))
+    assert "git restore .make Makefile &&" in saved
+    assert "mv .vscode/launch.json.bak .vscode/launch.json" in saved
+    added = "\n".join(upgrade._next_steps(upgrade.Report(launch="added")))
+    assert "git restore .make Makefile &&" in added and "rm .vscode/launch.json" in added
+
+
+def test_success_report_has_red_headline_in_a_terminal(tmp_path, monkeypatch, capsys):
+    ok = prepared(tmp_path / "ok")
+    code, out, _ = run_main(ok, monkeypatch, capsys, "FETCH_HEAD")
+    assert code == 0
+    assert "\x1b" not in out  # pipes
+    assert upgrade.NOTHING_COMMITTED in out and "What to do now:" in out
+
+    ok2 = prepared(tmp_path / "ok2")
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    monkeypatch.setenv("TERM", "xterm")
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    code, out, _ = run_main(ok2, monkeypatch, capsys, "FETCH_HEAD")
+    assert code == 0
+    assert f"\x1b[1;31m{upgrade.NOTHING_COMMITTED}\x1b[0m" in out
+    assert out.count("\x1b") == 2  # only the headline is red

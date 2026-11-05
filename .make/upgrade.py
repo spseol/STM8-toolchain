@@ -400,8 +400,32 @@ def _summary(report):
     if report.gitignore_added:
         lines.append("Added to .gitignore: " + ", ".join(report.gitignore_added))
     lines += report.notes
-    lines.append("Nothing was committed. Review the changes with `git status` and `git diff`.")
     return lines
+
+
+NOTHING_COMMITTED = "Nothing was committed. Review the changes with `git status` and `git diff`."
+
+
+def _next_steps(report):
+    """Lines that tell what to do after the update. The git commands are limited to the files
+    the update touches, so other work of the project is never committed or thrown away."""
+    paths = ".make Makefile .vscode/launch.json" + (" .gitignore" if report.gitignore_added else "")
+    # git restore cannot restore a launch.json that was not tracked: put the original back by hand
+    tracked = ".make Makefile" + (" .vscode/launch.json" if not report.backup and report.launch != "added" else "")
+    tracked += " .gitignore" if report.gitignore_added else ""
+    steps = ["Look at the changes:  git status --short   and   git diff -- Makefile"]
+    if report.makefile == "conflict":
+        steps.append("Resolve the conflict in Makefile: search for <<<<<<<, keep the lines you want, "
+                     "delete the markers (<<<<<<<, =======, >>>>>>>).")
+    steps.append("Check that the project still builds:  make")
+    steps.append(f"All right? Keep the update:  git add {paths} && git commit -m \"toolchain update\"")
+    undo = f"Something is wrong? Undo it all:  git restore {tracked} && git clean -fd -- .make"
+    if report.backup:
+        undo += f" && mv {report.backup} .vscode/launch.json"
+    elif report.launch == "added":
+        undo += " && rm .vscode/launch.json"
+    steps.append(undo)
+    return ["What to do now:"] + [f"  {number}. {step}" for number, step in enumerate(steps, 1)]
 
 
 def _use_color():
@@ -413,9 +437,14 @@ def _use_color():
     return sys.stderr.isatty() or sys.stdin.isatty()
 
 
+def _red(text):
+    """TEXT in bold red in a terminal, plain otherwise."""
+    return f"\033[1;31m{text}\033[0m" if _use_color() else text
+
+
 def _error(text):
     """Print TEXT as an error on stderr, red in a terminal."""
-    print(f"\033[1;31m{text}\033[0m" if _use_color() else text, file=sys.stderr)
+    print(_red(text), file=sys.stderr)
 
 
 def main(argv):
@@ -442,6 +471,8 @@ def main(argv):
                "`git checkout .make Makefile .vscode/launch.json` restores it.")
         return 1
     print("\n".join(_summary(report)))
+    print(_red(NOTHING_COMMITTED))
+    print("\n".join(["", *_next_steps(report)]))
     if args.json:
         print(json.dumps(dataclasses.asdict(report)))
     return 2 if report.makefile == "conflict" else 0
