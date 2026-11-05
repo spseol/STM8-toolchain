@@ -105,6 +105,8 @@ Registry periferií (SFR):
 
 Po `monitor reset halt` je nutné `maintenance flush register-cache`. `monitor reset run` přes gdb hlásí „Protocol error with Rcmd“, proto se používá `reset halt` + `resume`.
 
+Windows: `make debug` a `make gdb` (TUI) v Git Bash (mintty, `tty` = `/dev/pty*`) hlásí `Cannot enable the TUI when output is not a terminal`, protože nativní `stm8-gdb.exe` dostane od MSYS roru místo terminálu. Makefile proto v tom případě před `stm8-gdb` přidá `winpty` (proměnná `WINPTY`, je v Git for Windows). V PowerShellu, cmd a Windows Terminalu (`/dev/cons*`) a na Linuxu a macOS se nepřidává nic. Zkouší se v mintty bez okna: `mintty -w hide -e bash -l skript.sh`.
+
 ## Ladění ve VS Code / VSCodium
 
 Rozšíření `spseol.stm8-toolchain` je v `.make/vscode/` (čistý JS bez npm; návrh, plán a měření spiku jsou v historii gitu, commity `0b2c908` a `02d222e`). `make vscode` ho zabalí (`pack.py`, VSIX je zip) a nainstaluje do `code` a `codium` z `PATH` (`IDES=…` vybírá). Určeným kanálem pro studenty je ale marketplace (Open VSX pro VSCodium, Visual Studio Marketplace pro VS Code), viz `release.py` níže; `make vscode` zůstává pro vývoj a pro stroje bez marketplace. Typ ladění je `stm8`.
