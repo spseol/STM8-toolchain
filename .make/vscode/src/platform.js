@@ -3,11 +3,31 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 /**
- * Python of the toolchain, the same as PYTHON in the Makefile. Windows has no `python3`: the
+ * Python of the toolchain, the same choice as PYTHON in the Makefile. Windows has no `python3`: the
  * python3.exe in %LOCALAPPDATA%\Microsoft\WindowsApps is only a stub for the Microsoft Store,
- * which exits with 9009 ("Update Toolchain failed (code 9009)").
+ * which exits with 9009 ("Update Toolchain failed (code 9009)"), so it is `python` there.
+ * Elsewhere the first of `python3` and `python` found in PATH (macOS has only python3, Linux usually both);
+ * `python3` when neither is found, so the error message names the usual command.
  */
-const PYTHON = process.platform === 'win32' ? 'python' : 'python3';
+function detectPython(env = process.env, { platform = process.platform, exists = isExecutable } = {}) {
+  if (platform === 'win32') return 'python';
+  const dirs = String(env[pathKey(env)] || '').split(path.delimiter).filter(Boolean);
+  for (const name of ['python3', 'python']) {
+    if (dirs.some((dir) => exists(path.join(dir, name)))) return name;
+  }
+  return 'python3';
+}
+
+function isExecutable(file) {
+  try {
+    fs.accessSync(file, fs.constants.X_OK);
+    return fs.statSync(file).isFile();
+  } catch {
+    return false;
+  }
+}
+
+const PYTHON = detectPython();
 
 /**
  * Environment of the Python inside stm8-gdb. Windows: its default text encoding is the ANSI code page (cp1250), but the
@@ -68,4 +88,4 @@ function taskEnv(env = process.env, options = {}) {
   return changed[key] === env[key] ? {} : { [key]: changed[key] };
 }
 
-module.exports = { PYTHON, GDB_PYTHON_ENV, pathKey, gitUsrBin, toolEnv, taskEnv };
+module.exports = { PYTHON, detectPython, GDB_PYTHON_ENV, pathKey, gitUsrBin, toolEnv, taskEnv };

@@ -28,6 +28,10 @@ else
     echo "  % brew install fzf"
     if [ "$OS" = "Windows_NT" ]; then
         PYTHON=python
+    elif command -v python3 >/dev/null 2>&1; then
+        PYTHON=python3
+    elif command -v python >/dev/null 2>&1; then
+        PYTHON=python
     else
         PYTHON=python3
     fi

@@ -1,7 +1,13 @@
 #!/bin/bash
 
 # usage: [PYTHON=python3] switch_device.sh [CHIP]   (make passes its PYTHON)
-PYTHON=${PYTHON:-python}
+if [ -z "$PYTHON" ]; then
+    # Windows: python3.exe is a stub of the Microsoft Store; elsewhere the first of python3 and python
+    if [ "$OS" = "Windows_NT" ]; then PYTHON=python
+    elif command -v python3 >/dev/null 2>&1; then PYTHON=python3
+    elif command -v python >/dev/null 2>&1; then PYTHON=python
+    else PYTHON=python3; fi
+fi
 # Without CHIP the chip is picked interactively, with CHIP (e.g. stm8s103f3) nothing is asked.
 if [ -n "$1" ]; then
     device=$("$PYTHON" .make/devices.py --check "$1") || exit 1

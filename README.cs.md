@@ -185,6 +185,8 @@ git fetch https://gitlab.com/spseol/mit-no/STM8S-toolchain.git main
 python3 -I -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD
 ```
 
+Na Windows `python3` není (ten ve `WindowsApps` je jen zástupce pro Microsoft Store), napiš `python`. Stejně tak na Linuxu nebo macOS, kde je jen jeden z nich.
+
 Obnoví `.make/` a `.vscode/launch.json` a změny toolchainu slije do tvého `Makefile` (čip, frekvence a cesty
 zůstanou; když se změny střetnou, zůstanou v `Makefile` značky konfliktu `<<<<<<<`, které vyřešíš ručně).
 Nikdy nesahá na `src/`, `inc/` ani na tvé README a nic necommituje, takže výsledek zkontroluj přes `git diff`

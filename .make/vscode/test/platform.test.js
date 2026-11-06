@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { PYTHON, GDB_PYTHON_ENV, pathKey, gitUsrBin, toolEnv, taskEnv } = require('../src/platform');
+const { PYTHON, detectPython, GDB_PYTHON_ENV, pathKey, gitUsrBin, toolEnv, taskEnv } = require('../src/platform');
 
 test('gdb_python_runs_in_utf8_mode_only_on_windows', () => {
   assert.deepStrictEqual(GDB_PYTHON_ENV, process.platform === 'win32' ? { PYTHONUTF8: '1' } : {});
@@ -11,8 +11,27 @@ const GIT = 'C:\\Program Files\\Git';
 const BASH = `${GIT}\\usr\\bin\\bash.exe`;
 const win = (files) => ({ platform: 'win32', exists: (file) => files.includes(file) });
 
-test('python_is_python3_except_on_windows', () => {
-  assert.strictEqual(PYTHON, process.platform === 'win32' ? 'python' : 'python3');
+test('python_is_one_of_the_two_names', () => {
+  assert.ok(['python', 'python3'].includes(PYTHON));
+  if (process.platform === 'win32') assert.strictEqual(PYTHON, 'python');
+});
+
+test('python_on_windows_is_python_even_when_python3_stub_exists', () => {
+  const exists = () => true;
+  assert.strictEqual(detectPython({ Path: 'C:\\WindowsApps' }, { platform: 'win32', exists }), 'python');
+});
+
+test('python_prefers_python3_and_falls_back_to_python', () => {
+  const env = { PATH: '/a:/b' };
+  const only = (...files) => ({ platform: 'linux', exists: (file) => files.includes(file) });
+  assert.strictEqual(detectPython(env, only('/a/python', '/b/python3')), 'python3');
+  assert.strictEqual(detectPython(env, only('/b/python')), 'python');
+  assert.strictEqual(detectPython(env, only('/a/python3')), 'python3');
+});
+
+test('python_is_python3_when_nothing_is_found', () => {
+  assert.strictEqual(detectPython({ PATH: '/a' }, { platform: 'linux', exists: () => false }), 'python3');
+  assert.strictEqual(detectPython({}, { platform: 'darwin', exists: () => false }), 'python3');
 });
 
 test('path_key_keeps_the_case_of_the_environment', () => {
