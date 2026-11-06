@@ -61,6 +61,22 @@ test('old_toolchain_message', async () => {
   );
 });
 
+test('no_rule_for_another_target_is_not_an_old_toolchain', async () => {
+  // Windows without bash: the chip is unknown and make asks for ../SPLSPL/mk/.mk. Update Toolchain would not help.
+  await assert.rejects(
+    readProjectInfo('/p', { exec: rejecting("make: *** No rule to make target '../SPLSPL/mk/.mk'.  Stop.") }),
+    (error) => error instanceof ToolchainError && error.fix === undefined && !/Old toolchain/.test(error.message),
+  );
+});
+
+test('make_without_bash_says_so', async () => {
+  const stderr = 'process_begin: CreateProcess(NULL, bash .make/device stm8s208rb, ...) failed.\nmake: *** No rule to make target \'../SPLSPL/mk/.mk\'.  Stop.';
+  await assert.rejects(
+    readProjectInfo('/p', { exec: rejecting(stderr) }),
+    (error) => error instanceof ToolchainError && error.fix === undefined && /cannot find bash/.test(error.message) && /usr\\bin/.test(error.message),
+  );
+});
+
 test('other_toolchain_errors_have_no_fix', async () => {
   await assert.rejects(
     readProjectInfo('/p', { exec: rejecting('Makefile:181: *** boom.  Stop.') }),

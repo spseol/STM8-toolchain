@@ -44,6 +44,25 @@ def warn(msg):
     print(f"\033[1;33msfr_gen: {msg}\033[0m", file=sys.stderr)
 
 
+def native_command(cmd):
+    """Windows: Makefile předává `CC` jako cestu pro MSYS bash, `/c/Program\\ Files/SDCC/bin/sdcc`.
+    python.exe (není z MSYS) ji nespustí (WinError 2), potřebuje `C:/Program Files/SDCC/bin/sdcc`.
+    MSYS bash při předání argumentu nativnímu programu cestu ještě změní na
+    `C:/Program/ Files/SDCC/bin/sdcc` (`\\ ` se stane `/ `), proto se obě podoby opraví.
+    Jinde a u příkazů z PATH (`sdcc`, `stm8-objcopy`) se nic nemění."""
+    if os.name != "nt":
+        return cmd
+    path = cmd.replace("\\ ", " ").replace("/ ", " ")
+    m = re.match(r"^/([A-Za-z])/(.*)$", path)
+    if m:
+        path = f"{m.group(1).upper()}:/{m.group(2)}"
+    # shutil.which() příponu .exe u cesty se složkou doplňuje až od Pythonu 3.12
+    for candidate in (path, path + ".exe"):
+        if os.path.isfile(candidate):
+            return candidate
+    return cmd
+
+
 def run(cmd, **kw):
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           text=True, errors="replace", **kw)
@@ -106,9 +125,14 @@ def generate(cc, cflags, objcopy, out_elf):
                 f.write(f"#undef {name}\n__at({base}) {typ}_TypeDef {name};\n")
         rel = os.path.join(tmp, "sfr.rel")
         elf = os.path.join(tmp, "sfr.elf")
-        run([cc, *cflags, "--debug", "--out-fmt-elf", "-c", src, "-o", rel])
+        # Windows: cesta ke zdroji po zpětných lomítkách (C:\Users\...\Temp\tmpXXXX\sfr.c) se zapíše do
+        # ladicích informací SDCC a poškodí je (gdb: "Dwarf Error: Could not find abbrev number");
+        # s lomítky dopředu je ELF v pořádku
+        src_arg, rel_arg, elf_arg = (p.replace("\\", "/") if os.name == "nt" else p
+                                     for p in (src, rel, elf))
+        run([cc, *cflags, "--debug", "--out-fmt-elf", "-c", src_arg, "-o", rel_arg])
         # bez main a bez knihoven: v ELF jsou jen ladicí informace
-        run([cc, "-mstm8", "--debug", "--out-fmt-elf", "--nostdlib", rel, "-o", elf])
+        run([cc, "-mstm8", "--debug", "--out-fmt-elf", "--nostdlib", rel_arg, "-o", elf_arg])
         if not os.path.isfile(elf):
             raise RuntimeError("SDCC nevytvořil sfr.elf")
         # symboly ELF jsou na adresách SFR typu FUNC, gdb stačí DWARF
@@ -132,6 +156,10 @@ def generate(cc, cflags, objcopy, out_elf):
 
 
 def main():
+    # Windows: výstup do roury/konzole v 8bitovém kódování bez `→` by spadl na UnicodeEncodeError
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(
         description="Připraví registry periferií (sfr.elf, sfr.json) pro gdb.")
     parser.add_argument("--cc", default="sdcc")
@@ -141,7 +169,8 @@ def main():
     parser.add_argument("-o", "--output", required=True, help="výstupní sfr.elf")
     args = parser.parse_args()
     try:
-        count = generate(args.cc, shlex.split(args.cflags), args.objcopy, args.output)
+        count = generate(native_command(args.cc), shlex.split(args.cflags),
+                         args.objcopy, args.output)
     except (OSError, RuntimeError) as e:
         warn(f"registry periferií pro gdb se nepodařilo připravit:\n{e}")
         return 0

@@ -2,18 +2,19 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { runUpgrade } = require('../src/upgrade');
+const { PYTHON } = require('../src/platform');
 
 const URL = 'https://example.org/toolchain.git';
 const failure = (code, stdout = '', stderr = '') => Object.assign(new Error(`exit ${code}`), { code, stdout, stderr });
 
-/** Fake exec: records the calls; `python` decides the result of the python3 step. */
+/** Fake exec: records the calls; `python` decides the result of the Python step (python3, on Windows python). */
 function fakeExec({ fetch, show, python } = {}) {
   const calls = [];
   const exec = async (cmd, args, options) => {
     calls.push({ cmd, args, options });
     if (cmd === 'git' && args[0] === 'fetch') return fetch ? fetch() : { stdout: '', stderr: '' };
     if (cmd === 'git' && args[0] === 'show') return show ? show() : { stdout: 'SOURCE-OF-UPGRADE', stderr: '' };
-    if (cmd === 'python3') return python ? python() : { stdout: '', stderr: '' };
+    if (cmd === PYTHON) return python ? python() : { stdout: '', stderr: '' };
     throw new Error(`unexpected ${cmd}`);
   };
   return { exec, calls };
@@ -24,7 +25,7 @@ const REPORT = JSON.stringify({ replaced: 3, removed: 1, makefile: 'merged', lau
 test('pipeline_fetch_show_python_in_order', async () => {
   const { exec, calls } = fakeExec({ python: () => ({ stdout: `Updated .make/\n${REPORT}\n` }) });
   const result = await runUpgrade('/p', { url: URL, exec });
-  assert.deepStrictEqual(calls.map((c) => [c.cmd, ...c.args.slice(0, 1)]), [['git', 'fetch'], ['git', 'show'], ['python3', '-I']]);
+  assert.deepStrictEqual(calls.map((c) => [c.cmd, ...c.args.slice(0, 1)]), [['git', 'fetch'], ['git', 'show'], [PYTHON, '-I']]);
   assert.deepStrictEqual(calls[0].args, ['fetch', '--', URL, 'main']);
   assert.deepStrictEqual(calls[1].args, ['show', 'FETCH_HEAD:.make/upgrade.py']);
   // -I: a difflib.py or json.py in the project folder must not replace the standard library
@@ -93,10 +94,20 @@ test('show_failure_means_toolchain_without_upgrade_script', async () => {
 });
 
 test('missing_python_is_code_1', async () => {
-  const { exec } = fakeExec({ python: () => { throw Object.assign(new Error('spawn python3 ENOENT'), { code: 'ENOENT' }); } });
+  const { exec } = fakeExec({ python: () => { throw Object.assign(new Error(`spawn ${PYTHON} ENOENT`), { code: 'ENOENT' }); } });
   const result = await runUpgrade('/p', { url: URL, exec });
   assert.strictEqual(result.code, 1);
-  assert.match(result.output, /python3/);
+  assert.match(result.output, new RegExp(PYTHON));
+});
+
+test('unknown_exit_code_of_python_is_a_failure_not_a_success', async () => {
+  // Windows: the Microsoft Store stub of python3.exe exits with 9009 and prints that it did not find Python
+  const { exec } = fakeExec({ python: () => { throw failure(9009, '', 'Python was not found; run without arguments to install from the Microsoft Store'); } });
+  const result = await runUpgrade('/p', { url: URL, exec });
+  assert.strictEqual(result.code, 1);
+  assert.match(result.output, /exited with code 9009/);
+  assert.match(result.output, /Microsoft Store/);
+  assert.strictEqual(result.conflict, undefined);
 });
 
 test('url_that_looks_like_an_option_stays_after_double_dash', async () => {

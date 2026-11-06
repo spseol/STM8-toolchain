@@ -78,7 +78,15 @@ def is_connected():
 
 
 def tcp_listening(port):
-    """Poslouchá už na portu ručně spuštěný OpenOCD (make openocd)? Jen Linux."""
+    """Poslouchá už na portu ručně spuštěný OpenOCD (make openocd)? Linux (/proc) a Windows."""
+    if os.name == "nt":
+        import socket
+
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                return True
+        except OSError:
+            return False
     for name in ("/proc/net/tcp", "/proc/net/tcp6"):
         try:
             with open(name) as f:
@@ -111,12 +119,22 @@ def write_session():
         pass
 
 
+def log_option(log):
+    """Kam půjde stderr OpenOCD. Linux a macOS: gdb příkaz pouští přes sh, takže `2>LOG`
+    (cesta v uvozovkách shellu). Windows: gdb žádný shell nepoužije, `2>LOG` by dostal
+    OpenOCD jako argument a skončil; proto jeho vlastní `-l`. gdb si argumenty rozebírá
+    sám (zpětné lomítko je únikový znak), proto lomítka dopředu a uvozovky."""
+    if os.name == "nt":
+        return '-l "' + log.replace("\\", "/") + '"'
+    return "2>" + shlex.quote(log)
+
+
 def pipe_target(openocd, log):
-    """`target extended-remote` argument: OpenOCD on a pipe. gdb runs it through sh, so LOG is quoted.
+    """`target extended-remote` argument: OpenOCD on a pipe.
     .make/vscode/dap_info.py builds the same string (gdbTarget)."""
     return (
         f'| {openocd} -c "gdb_port pipe" -c "telnet_port disabled"'
-        f' -c "tcl_port disabled" 2>{shlex.quote(log)}'
+        f' -c "tcl_port disabled" {log_option(log)}'
     )
 
 

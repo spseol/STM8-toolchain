@@ -2,6 +2,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+const { taskEnv } = require('./platform');
+
 const OWN_LABEL = /"label"\s*:\s*"stm8: build"/; // tasks.json is JSONC (comments), so no JSON.parse
 
 /** True when FOLDER's .vscode/tasks.json defines the label `stm8: build` itself; a read error means no. */
@@ -13,6 +15,12 @@ function hasOwnBuildTask(folder) {
   }
 }
 
+/** ShellExecution options: the project folder; on Windows PATH with Git's bash (taskEnv), else nothing more. */
+function shellOptions(cwd) {
+  const env = taskEnv();
+  return Object.keys(env).length ? { cwd, env } : { cwd };
+}
+
 /**
  * The build task `stm8: build` that launch.json uses as preLaunchTask. VS Code labels a task
  * of an extension "<source>: <name>", so source 'stm8' and name 'build' make the label exactly
@@ -21,7 +29,7 @@ function hasOwnBuildTask(folder) {
 function buildTask(vscode, folder) {
   const task = new vscode.Task(
     { type: 'stm8' }, folder, 'build', 'stm8',
-    new vscode.ShellExecution('make debug-files', { cwd: folder.uri.fsPath }),
+    new vscode.ShellExecution('make debug-files', shellOptions(folder.uri.fsPath)),
     ['$sdcc'], // declared in package.json (contributes.problemMatchers)
   );
   task.group = vscode.TaskGroup.Build;
@@ -47,4 +55,4 @@ function registerBuildTask(vscode) {
   });
 }
 
-module.exports = { registerBuildTask, buildTask };
+module.exports = { registerBuildTask, buildTask, shellOptions };

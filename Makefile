@@ -261,9 +261,12 @@ endif
 
 ifeq ($(wildcard $(SPLLIB_ELF)),)
 $(SPLLIB_ELF): $(SPL_OBJECTS_ELF) | $(OUTPUT_SPL_DIR_ELF)
-	@echo $(SPL_OBJECTS_ELF) > objects.list
+	@rm -f objects.list
+	@for prefix in $(SPL_SOURCE_PREFIX); do \
+         ls $(OUTPUT_SPL_DIR_ELF)/$$prefix*.rel >> objects.list; \
+    done;
 	$(AR) -rc $(SPLLIB_ELF) @objects.list
-	@rm objects.list
+	@rm -f objects.list
 endif
 
 
@@ -357,16 +360,26 @@ $(SFR_ELF): $(SPL_INC_DIR)/stm8s.h .make/sfr_gen.py Makefile | $(OUTPUT_DIR_ELF)
 GDB_ENV = STM8_OPENOCD='$(OPENOCD)' STM8_OPENOCD_LOG=$(OUTPUT_DIR_ELF)/openocd.log \
 	STM8_SFR=$(SFR_ELF)
 
+# Windows, Git Bash (mintty): nativní stm8-gdb dostane místo terminálu rouru a TUI hlásí
+# "Cannot enable the TUI when output is not a terminal". winpty (je v Git for Windows) mu
+# terminál dodá; pozná se podle /dev/pty*. V PowerShellu, cmd a Windows Terminalu (/dev/cons*)
+# a na Linuxu a macOS se nic nepřidává.
+ifeq ($(OS),Windows_NT)
+  WINPTY = $$(case "$$(tty 2>/dev/null)" in /dev/pty*) command -v winpty;; esac)
+else
+  WINPTY =
+endif
+
 # ladění jedním příkazem: přeloží, nahraje, zastaví na main(); bez cgdb gdb TUI
 debug cgdb: $(TARGET_ELF) $(SFR_ELF)
 ifneq ($(shell command -v cgdb),)
 	+$(GDB_ENV) STM8_UI=cgdb CGDB_DIR=.make/cgdb cgdb -d stm8-gdb -- -q -x .make/gdbinit $(TARGET_ELF)
 else
-	+$(GDB_ENV) STM8_UI=tui stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $(TARGET_ELF)
+	+$(GDB_ENV) STM8_UI=tui $(WINPTY) stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $(TARGET_ELF)
 endif
 
 gdb: $(TARGET_ELF) $(SFR_ELF)
-	+$(GDB_ENV) STM8_UI=tui stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $(TARGET_ELF)
+	+$(GDB_ENV) STM8_UI=tui $(WINPTY) stm8-gdb -q --tui -x .make/gdbinit -ex 'focus cmd' $(TARGET_ELF)
 
 # sériový terminál na prvním USB-serial portu; rychlost se zjistí z projektu
 # (UARTx_Init nebo zápis do BRR registrů), ručně: make miniterm BAUD=9600
