@@ -41,7 +41,8 @@ def test_dap_mode_leaves_display_file_alone(tmp_path):
 
 def test_is_connected_false_without_target():
     proc = gdb_batch(["python print(is_connected(), dap_mode())"])
-    assert proc.stdout.split() == ["False", "False"]
+    # without build-*-elf/sfr.elf (make clean, fresh checkout) gdb warns on stdout first; the printed values come last
+    assert proc.stdout.split()[-2:] == ["False", "False"]
 
 
 @pytest.mark.hw
