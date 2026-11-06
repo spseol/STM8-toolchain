@@ -2,7 +2,7 @@
 
 All notable changes to this extension are documented here.
 
-## 0.3.3 05-11-2026
+## 0.3.3 06-11-2026
 
 ### Fixed
 
@@ -24,8 +24,10 @@ All notable changes to this extension are documented here.
 
 ### Changed
 
-- The version is 0.3.3 so that a development build installed by `make vscode` is newer than the published
-  one and the editor does not replace it with the version from the marketplace at start.
+- The Python of the toolchain is chosen by what is installed: the first of `python3` and `python` found in
+  `PATH` (macOS has only `python3`, Linux usually both), `python3` when neither is found. Windows stays on
+  `python`, because `python3.exe` there is the Microsoft Store stub. The Makefiles and the helper scripts
+  (`switch_device.sh`, `pyserial.auto`, `lib-mv.sh`) use the same order.
 
 ## 0.3.1 04-11-2026
 
