@@ -24,7 +24,11 @@ HSI_VALUE:=$(shell grep 'define[[:space:]]*HSI_VALUE' ../SPLSPL/inc/stm8s.h 2>/d
 ifeq ($(HSI_VALUE),)
   HSI_VALUE=16000000
 endif
-F_CPU?=$(shell echo $$(( $(HSI_VALUE) / $(HSI_DIV) )))
+# F_CPU se spočítá jednou (:=). Rekurzivní ?= by spustilo shell při každém použití,
+# tedy při každém překladu zvlášť (na Windows je start procesu drahý).
+ifeq ($(origin F_CPU),undefined)
+F_CPU := $(shell echo $$(( $(HSI_VALUE) / $(HSI_DIV) )))
+endif
 #F_CPU=8000000
 
 ##############################################################################
@@ -80,17 +84,16 @@ endif
 
 
 #DEVICE=STM8S103
-DEVICE=$(shell bash .make/device $(DEVICE_FLASH))
+# :=, ne =. S rekurzivním = se bash spouští při každém použití $(DEVICE) (42x při načtení
+# Makefile), což je na Windows několik sekund.
+DEVICE:=$(shell bash .make/device $(DEVICE_FLASH))
 DEVICE_FLASH_STVP=$(shell bash .make/device_stvp $(DEVICE_FLASH))
 
 MKDIR = mkdir
 CP = cp
 
-ifeq ($(findstring 2019, $(shell openocd --version 2>&1)), 2019)
-    interface = interface/stlink.cfg
-else
-    interface = interface/stlink-dap.cfg
-endif
+# openocd --version se zeptá až při použití (flash, debug), ne při každém make
+interface = $(if $(findstring 2019,$(shell openocd --version 2>&1)),interface/stlink.cfg,interface/stlink-dap.cfg)
 ifeq ($(findstring 003, $(DEVICE)), 003)
 	target = target/stm8s003.cfg
 else ifeq ($(findstring 103, $(DEVICE)), 103)
@@ -103,7 +106,7 @@ endif
 OPENOCD = openocd -f .make/stm8s-flash.cfg -f $(interface) -f $(target)
 
 # běží make debug? (PID gdb v .debug-session a proces žije)
-DEBUG_PID := $(shell p=$$(cat .debug-session 2>/dev/null) && kill -0 $$p 2>/dev/null && echo $$p)
+DEBUG_PID := $(if $(wildcard .debug-session),$(shell p=$$(cat .debug-session 2>/dev/null) && kill -0 $$p 2>/dev/null && echo $$p))
 
 
 ifeq ($(OS),Windows_NT)
