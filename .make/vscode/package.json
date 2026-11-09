@@ -2,7 +2,7 @@
   "name": "stm8-toolchain",
   "displayName": "STM8 Toolchain Debugger",
   "description": "Build, flash and debug STM8S microcontroller projects with SDCC, OpenOCD and stm8-gdb: create a project, press F5, step through code, inspect variables and peripheral registers.",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publisher": "spseol",
   "license": "GPL-3.0-or-later",
   "icon": "media/icon.png",

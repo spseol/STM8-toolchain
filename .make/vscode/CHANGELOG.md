@@ -2,6 +2,16 @@
 
 All notable changes to this extension are documented here.
 
+## 0.3.4 09-11-2026
+
+### Fixed
+
+- Windows: `make` typed in the integrated terminal of VSCodium (PowerShell, cmd) works. The terminal inherits
+  `PATH` of the editor started from the Start menu, which has only `<Git>\cmd`, so `make` did not find
+  `bash`, `tr` and `nproc` ("CreateProcess ... failed", "No rule to make target '../SPLSPL/mk/.mk'"). The
+  extension now puts `<Git>\usr\bin` first in `PATH` of terminals opened after it is activated, not only of
+  its own tasks. Terminals that are already open must be reopened.
+
 ## 0.3.3 05-11-2026
 
 ### Fixed
