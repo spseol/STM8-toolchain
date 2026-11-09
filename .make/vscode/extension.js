@@ -11,6 +11,7 @@ const project = require('./src/project'); // called through the object, so the t
 const upgrade = require('./src/upgrade');
 const newproject = require('./src/newproject');
 const { registerBuildTask } = require('./src/tasks');
+const { applyTerminalEnv } = require('./src/platform');
 
 const TYPE = 'stm8';
 const RESUMING = new Set(['continue', 'next', 'stepIn', 'stepOut', 'stepBack', 'reverseContinue']);
@@ -23,6 +24,9 @@ const rootOf = (folder) => (folder || (vscode.workspace.workspaceFolders || [])[
 
 function activate(context) {
   const output = vscode.window.createOutputChannel('STM8 debug');
+
+  // Windows: make typed in the terminal of the editor needs bash from <Git>\usr\bin (new terminals only)
+  applyTerminalEnv(context.environmentVariableCollection);
 
   // --- peripheral registers (SFR) ---------------------------------------------------------
   const evaluate = async (expression) => {
