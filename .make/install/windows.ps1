@@ -3,7 +3,7 @@
 #   irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
 #
 # Run it in PowerShell. It asks for administrator rights (UAC) once and installs:
-#   * with Chocolatey (default; installed when missing): git, make, python, openocd
+#   * with Chocolatey (default; installed when missing) or with winget: git, make, python, openocd
 #     [and vscodium, when neither VS Code nor VSCodium is found],
 #   * SDCC (installer from SourceForge, into the default folder C:\Program Files\SDCC),
 #   * stm8-gdb (STM8 binutils-gdb installer from GitLab, adds itself to PATH),
@@ -12,7 +12,7 @@
 # Not installed: the ST-Link driver and STVP (ST publishes them after registration; flashing
 # works through OpenOCD without STVP).
 #
-# Experimental: winget instead of Chocolatey
+# Both package managers work equally. To use winget instead of Chocolatey:
 #   $STM8_PM = 'winget'; irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
 #
 # Safe to run again: what is installed already is skipped.
@@ -27,7 +27,7 @@ $GdbApi       = 'https://gitlab.com/api/v4/projects/spseol%2Fmit-no%2Fstm8-binut
 $CclsApi      = 'https://gitlab.com/api/v4/projects/spseol%2Fmit-no%2Fccls/releases?per_page=1'
 $ExtensionId  = 'spseol.stm8-toolchain'
 $Blog         = 'https://chytrosti.marrek.cz/stm8install.html'
-# winget package ids; they are not verified yet, see the experimental note above
+# winget package ids
 $WingetIds    = @('Git.Git', 'ezwinports.make', 'Python.Python.3.12', 'xpack-dev-tools.openocd-xpack')
 $WingetEditor = 'VSCodium.VSCodium'
 

@@ -39,21 +39,20 @@ curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/ins
 curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/macos.sh | bash
 ```
 
-**Windows 10/11**: open *PowerShell* and run (it asks for administrator rights once and installs
-[Chocolatey](https://chocolatey.org) if you do not have it):
+**Windows 10/11**: open *PowerShell* and run one of the two (they do the same, choose the package manager
+you prefer). The script asks for administrator rights once.
+
+With [Chocolatey](https://chocolatey.org) (installed when you do not have it):
 
 ```powershell
 irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
 ```
 
-<details>
-<summary>Windows: winget instead of Chocolatey (experimental)</summary>
+With winget (in Windows 10/11 already):
 
 ```powershell
 irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows-winget.ps1 | iex
 ```
-
-</details>
 
 Then open VS Code or VSCodium and run **`STM8: New Project…`**. On macOS start the editor from a
 terminal (`code .`), see [Requirements](#requirements).

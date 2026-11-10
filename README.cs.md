@@ -213,7 +213,8 @@ Všechno potřebné nainstaluje jeden příkaz v PowerShellu (podrobnosti v
 [README rozšíření pro VS Code](.make/vscode/README.md#installation)):
 
 ```powershell
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex          # Chocolatey
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows-winget.ps1 | iex   # nebo winget
 ```
 
 ## Tři Mejkfaily ....

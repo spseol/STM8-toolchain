@@ -1,4 +1,4 @@
-# Experimental: the same installer as windows.ps1, but with winget instead of Chocolatey.
+# The same installer as windows.ps1, but with winget instead of Chocolatey.
 #
 #   irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows-winget.ps1 | iex
 #

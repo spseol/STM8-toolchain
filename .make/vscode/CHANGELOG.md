@@ -9,7 +9,7 @@ First stable release: the extension works on Linux, macOS (Apple Silicon) and Wi
 ### Added
 
 - Installation with one command per system (`.make/install/linux.sh`, `.make/install/macos.sh`,
-  `.make/install/windows.ps1`; an experimental `.make/install/windows-winget.ps1`). The scripts install the compiler,
+  `.make/install/windows.ps1` with Chocolatey, `.make/install/windows-winget.ps1` with winget). The scripts install the compiler,
   OpenOCD, `stm8-gdb` and the extension, and install Homebrew (macOS) or Chocolatey (Windows) when missing.
   See the README.
 
