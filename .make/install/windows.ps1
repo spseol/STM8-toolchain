@@ -1,6 +1,6 @@
 # One-command installer of the STM8S toolchain tools for Windows 10/11 (x64).
 #
-#   irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/windows.ps1 | iex
+#   irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
 #
 # Run it in PowerShell. It asks for administrator rights (UAC) once and installs:
 #   * with Chocolatey (default; installed when missing): git, make, python, openocd
@@ -13,14 +13,14 @@
 # works through OpenOCD without STVP).
 #
 # Experimental: winget instead of Chocolatey
-#   $STM8_PM = 'winget'; irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/windows.ps1 | iex
+#   $STM8_PM = 'winget'; irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
 #
 # Safe to run again: what is installed already is skipped.
 # A manual installation and details: https://chytrosti.marrek.cz/stm8install.html#windows
 
 # --- settings (a variable set before running overrides the default) ---------------------
 if (-not $STM8_PM)   { $STM8_PM   = 'choco' }   # 'choco' or 'winget'
-if (-not $STM8_BASE) { $STM8_BASE = 'https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install' }
+if (-not $STM8_BASE) { $STM8_BASE = 'https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install' }
 $SdccVersion  = '4.6.0'                         # 4.5.0 is broken for STM8
 $SdccDir      = "$env:ProgramFiles\SDCC"       # Makefile-sdcc expects this exact folder
 $GdbApi       = 'https://gitlab.com/api/v4/projects/spseol%2Fmit-no%2Fstm8-binutils-gdb/releases/permalink/latest'

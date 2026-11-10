@@ -2,7 +2,7 @@
 # One-command installer of the STM8S toolchain tools for Debian, Ubuntu, Mint and
 # other Debian-based Linux distributions (amd64).
 #
-#   curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/linux.sh | bash
+#   curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/linux.sh | bash
 #
 # Installs: make, git, python3, SDCC, OpenOCD, stm8-gdb (STM8 binutils-gdb), stm8flash,
 # cgdb, ccls and the VS Code / VSCodium extension (when `code` or `codium` is found).

@@ -213,7 +213,7 @@ Všechno potřebné nainstaluje jeden příkaz v PowerShellu (podrobnosti v
 [README rozšíření pro VS Code](.make/vscode/README.md#installation)):
 
 ```powershell
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/windows.ps1 | iex
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
 ```
 
 ## Tři Mejkfaily ....

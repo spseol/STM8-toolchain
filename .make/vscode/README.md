@@ -30,27 +30,27 @@ installs them all and then the extension itself. Run it in a terminal, once per 
 **Linux** (Debian, Ubuntu, Mint and other Debian-based distributions, amd64):
 
 ```sh
-curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/linux.sh | bash
+curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/linux.sh | bash
 ```
 
 **macOS** (Apple Silicon): installs Homebrew first if you do not have it.
 
 ```sh
-curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/macos.sh | bash
+curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/macos.sh | bash
 ```
 
 **Windows 10/11**: open *PowerShell* and run (it asks for administrator rights once and installs
 [Chocolatey](https://chocolatey.org) if you do not have it):
 
 ```powershell
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/windows.ps1 | iex
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
 ```
 
 <details>
 <summary>Windows: winget instead of Chocolatey (experimental)</summary>
 
 ```powershell
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/windows-winget.ps1 | iex
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows-winget.ps1 | iex
 ```
 
 </details>
@@ -58,7 +58,7 @@ irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/windows-
 Then open VS Code or VSCodium and run **`STM8: New Project…`**. On macOS start the editor from a
 terminal (`code .`), see [Requirements](#requirements).
 
-The scripts are short and readable, [take a look](https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/tree/main/install) before you run them. Run them again any time:
+The scripts are short and readable, [take a look](https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/tree/main/.make/install) before you run them. Run them again any time:
 what is installed already is skipped. The ST-Link driver for Windows is not installed by the script
 (ST publishes it after registration): if the board is not found, install
 [STSW-LINK009](https://www.st.com/en/development-tools/stsw-link009.html).

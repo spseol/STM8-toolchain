@@ -1,4 +1,4 @@
-"""The one-command installation scripts in install/ and the links to them."""
+"""The one-command installation scripts in .make/install/ and the links to them."""
 import re
 import shutil
 import subprocess
@@ -7,21 +7,21 @@ import pytest
 
 from conftest import ROOT
 
-INSTALL = ROOT / "install"
+INSTALL = ROOT / ".make" / "install"
 README = ROOT / ".make" / "vscode" / "README.md"
-RAW = "https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/"
+RAW = "https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/"
 
 
 def test_install_dir_is_not_given_to_students():
     entries = [line.strip() for line in (ROOT / ".make" / "prune.txt").read_text().splitlines()]
-    assert "install" in entries
+    assert ".make/install" in entries
 
 
 def test_readme_links_point_to_existing_scripts():
     names = re.findall(re.escape(RAW) + r"([\w.-]+)", README.read_text())
     assert {"linux.sh", "macos.sh", "windows.ps1", "windows-winget.ps1"} <= set(names)
     for name in names:
-        assert (INSTALL / name).is_file(), f"README links to install/{name}, which does not exist"
+        assert (INSTALL / name).is_file(), f"README links to .make/install/{name}, which does not exist"
 
 
 def test_scripts_use_the_same_base_url():

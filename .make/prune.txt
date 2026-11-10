@@ -22,4 +22,4 @@
 .make/vscode/SPIKE.md
 .make/vscode/release.py
 .make/vscode/RELEASING.md
-install
+.make/install

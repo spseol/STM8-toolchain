@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-command installer of the STM8S toolchain tools for macOS (Apple Silicon).
 #
-#   curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/macos.sh | bash
+#   curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/macos.sh | bash
 #
 # Installs (when missing): Command Line Tools, Homebrew, make, git, SDCC, OpenOCD, cgdb,
 # ccls, stm8-gdb (STM8 binutils-gdb, prebuilt package with its own Python), VSCodium
