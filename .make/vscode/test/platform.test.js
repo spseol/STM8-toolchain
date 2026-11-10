@@ -1,7 +1,16 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { PYTHON, detectPython, GDB_PYTHON_ENV, pathKey, gitUsrBin, toolEnv, taskEnv } = require('../src/platform');
+const {
+  PYTHON,
+  detectPython,
+  GDB_PYTHON_ENV,
+  pathKey,
+  gitUsrBin,
+  toolEnv,
+  taskEnv,
+  applyTerminalEnv,
+} = require('../src/platform');
 
 test('gdb_python_runs_in_utf8_mode_only_on_windows', () => {
   assert.deepStrictEqual(GDB_PYTHON_ENV, process.platform === 'win32' ? { PYTHONUTF8: '1' } : {});
@@ -81,4 +90,25 @@ test('task_env_has_only_the_path_and_only_when_it_changes', () => {
   assert.deepStrictEqual(taskEnv(env, win([`${GIT}\\cmd\\git.exe`, BASH])), { Path: `${GIT}\\usr\\bin;C:\\Windows;${GIT}\\cmd` });
   assert.deepStrictEqual(taskEnv({ PATH: '/usr/bin' }, { platform: 'linux', exists: () => true }), {});
   assert.deepStrictEqual(taskEnv({ Path: 'C:\\Windows' }, win([])), {});
+});
+
+const collection = () => {
+  const calls = [];
+  return { calls, prepend: (name, value) => calls.push([name, value]) };
+};
+
+test('terminal_env_prepends_git_usr_bin_to_the_path_of_new_terminals', () => {
+  const env = { Path: `C:\\Windows;${GIT}\\cmd` };
+  const c = collection();
+  assert.strictEqual(applyTerminalEnv(c, env, win([`${GIT}\\cmd\\git.exe`, BASH])), true);
+  assert.deepStrictEqual(c.calls, [['Path', `${GIT}\\usr\\bin;`]]);
+});
+
+test('terminal_env_adds_nothing_when_not_needed', () => {
+  const c = collection();
+  assert.strictEqual(applyTerminalEnv(c, { Path: `${GIT}\\usr\\bin;C:\\Windows` }, win([BASH])), false, 'already in PATH');
+  assert.strictEqual(applyTerminalEnv(c, { Path: 'C:\\Windows' }, win([])), false, 'no Git');
+  assert.strictEqual(applyTerminalEnv(c, { PATH: '/usr/bin' }, { platform: 'linux', exists: () => true }), false, 'not Windows');
+  assert.strictEqual(applyTerminalEnv(undefined, { Path: 'C:\\Windows' }, win([BASH])), false, 'no collection');
+  assert.deepStrictEqual(c.calls, []);
 });

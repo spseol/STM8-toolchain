@@ -88,4 +88,19 @@ function taskEnv(env = process.env, options = {}) {
   return changed[key] === env[key] ? {} : { [key]: changed[key] };
 }
 
-module.exports = { PYTHON, detectPython, GDB_PYTHON_ENV, pathKey, gitUsrBin, toolEnv, taskEnv };
+/**
+ * Terminal of the editor (the PowerShell in VSCodium): `make` typed there must find bash too, and the editor started from
+ * the Start menu does not have `<Git>\usr\bin` in PATH. COLLECTION is `context.environmentVariableCollection`; its
+ * changes reach terminals opened afterwards. Returns true when it added something (not on Linux and macOS, not when
+ * Git is missing or its usr\bin is already in PATH).
+ */
+function applyTerminalEnv(collection, env = process.env, options = {}) {
+  const usrBin = gitUsrBin(env, options);
+  if (!usrBin || !collection) return false;
+  const key = pathKey(env);
+  if (String(env[key] || '').split(';').some((dir) => dir.toLowerCase() === usrBin.toLowerCase())) return false;
+  collection.prepend(key, `${usrBin};`);
+  return true;
+}
+
+module.exports = { PYTHON, detectPython, GDB_PYTHON_ENV, pathKey, gitUsrBin, toolEnv, taskEnv, applyTerminalEnv };
