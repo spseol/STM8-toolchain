@@ -63,7 +63,9 @@ what is installed already is skipped. The ST-Link driver for Windows is not inst
 (ST publishes it after registration): if the board is not found, install
 [STSW-LINK009](https://www.st.com/en/development-tools/stsw-link009.html).
 
-A manual installation, other Linux distributions and building the tools from sources are described (in
+### Manual installation and building from sources
+
+Other Linux distributions, a manual installation and building the tools from sources are described (in
 Czech) at <https://chytrosti.marrek.cz/stm8install.html>.
 
 ## Requirements

@@ -35,6 +35,14 @@ def test_shell_scripts_parse(name):
     subprocess.run(["bash", "-n", str(INSTALL / name)], check=True)
 
 
+def test_macos_script_is_bash_3_compatible():
+    """macOS ships bash 3.2 (the docker image bash:3.2 parses the script too)."""
+    text = (INSTALL / "macos.sh").read_text()
+    code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+    for pattern in (r"declare\s+-A", r"\bmapfile\b", r"\breadarray\b", r"\$\{[A-Za-z_]+(\^\^?|,,?)\}", r"<<<", r"\|&", r"&>>"):
+        assert not re.search(pattern, code), pattern
+
+
 @pytest.mark.skipif(shutil.which("shellcheck") is None, reason="shellcheck not installed")
 @pytest.mark.parametrize("name", ["linux.sh", "macos.sh"])
 def test_shell_scripts_shellcheck(name):

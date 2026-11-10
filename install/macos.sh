@@ -8,6 +8,8 @@
 # (only when neither VS Code nor VSCodium is found) and the editor extension.
 # Run it as a normal user, not as root: it calls `sudo` only where it needs to.
 # Safe to run again: what is installed already is skipped.
+# Works with the old bash 3.2 that macOS ships: no bash 4 features here (arrays with
+# `declare -A`, `mapfile`, `${var,,}`, `<<<`, `|&`), a test checks that.
 #
 # A manual installation and details: https://chytrosti.marrek.cz/stm8install.html#macos
 
