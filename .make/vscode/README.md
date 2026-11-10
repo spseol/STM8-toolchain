@@ -6,11 +6,8 @@ microcontroller projects from VS Code or VSCodium. The extension drives the open
 [SDCC](http://sdcc.sourceforge.net/) compiler, [OpenOCD](https://openocd.org/) and `stm8-gdb`),
 which is used to teach microcontroller programming.
 
-**Before you install the extension, get `stm8-gdb`**: it is a special build of GDB for the STM8
-(*STM8 binutils-gdb*) and it is not part of the extension. Without it nothing can be debugged. Find
-it, with the build instructions, at <https://gitlab.com/spseol/mit-no/stm8-binutils-gdb>. It has a
-Debian package and a prebuilt package for macOS (Apple Silicon) with Python bundled (release
-`v15.0.50-stm8.2` or newer; the older `v15.0.50-stm8.1` has no Python).
+Everything the extension needs (compiler, OpenOCD, `stm8-gdb`) is installed by one command, see
+[Installation](#installation).
 
 ## What it does
 
@@ -25,21 +22,67 @@ Debian package and a prebuilt package for macOS (Apple Silicon) with Python bund
 - **New projects**: `STM8: New Project…` clones the toolchain into a new project folder and opens it.
 - **Toolchain updates**: `STM8: Update Toolchain` brings an existing project up to date.
 
+## Installation
+
+The extension needs a few tools (compiler, OpenOCD, a special `stm8-gdb`). One command per system
+installs them all and then the extension itself. Run it in a terminal, once per computer.
+
+**Linux** (Debian, Ubuntu, Mint and other Debian-based distributions, amd64):
+
+```sh
+curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/linux.sh | bash
+```
+
+**macOS** (Apple Silicon): installs Homebrew first if you do not have it.
+
+```sh
+curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/macos.sh | bash
+```
+
+**Windows 10/11**: open *PowerShell* and run (it asks for administrator rights once and installs
+[Chocolatey](https://chocolatey.org) if you do not have it):
+
+```powershell
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/windows.ps1 | iex
+```
+
+<details>
+<summary>Windows: winget instead of Chocolatey (experimental)</summary>
+
+```powershell
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/install/windows-winget.ps1 | iex
+```
+
+</details>
+
+Then open VS Code or VSCodium and run **`STM8: New Project…`**. On macOS start the editor from a
+terminal (`code .`), see [Requirements](#requirements).
+
+The scripts are short and readable, [take a look](https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/tree/main/install) before you run them. Run them again any time:
+what is installed already is skipped. The ST-Link driver for Windows is not installed by the script
+(ST publishes it after registration): if the board is not found, install
+[STSW-LINK009](https://www.st.com/en/development-tools/stsw-link009.html).
+
+A manual installation, other Linux distributions and building the tools from sources are described (in
+Czech) at <https://chytrosti.marrek.cz/stm8install.html>.
+
 ## Requirements
 
-The extension is tested on Linux. macOS (Apple Silicon) is supported: there is a prebuilt `stm8-gdb`
-with Python and DAP, and a complete session (build, flash, debugging in the extension) has been verified
-on a Mac with a Nucleo-STM8S208RB (OpenOCD and SDCC from Homebrew). `stm8-gdb` and `openocd` must be
-in the `PATH` of the program that starts the editor, so start VS Code / VSCodium from a terminal
-(`code .`), not from the Dock. There is no `lsusb` on macOS, so the ST-Link check is skipped and
-OpenOCD reports a missing board instead. Windows is not supported or tested. You need:
+Linux, macOS (Apple Silicon) and Windows 10/11 (x64) are supported. The [installation scripts](#installation)
+set all of this up; the list is for those who install the tools by hand:
 
-- `make`, `python3` and `git`
-- [SDCC](http://sdcc.sourceforge.net/) (the compiler)
+- `make`, `python3` (on Windows `python`) and `git` (on Windows Git for Windows, which brings `bash`)
+- [SDCC](http://sdcc.sourceforge.net/) (the compiler), **not version 4.5.0**: it is broken for STM8
 - `openocd`
-- `stm8-gdb` **15 or newer**, built with Python and Debug Adapter Protocol support. It comes from the
-  STM8 binutils-gdb build: <https://gitlab.com/spseol/mit-no/stm8-binutils-gdb>
+- `stm8-gdb` **15 or newer**, built with Python and Debug Adapter Protocol support. It is not part of
+  the extension. It comes from the STM8 binutils-gdb build: <https://gitlab.com/spseol/mit-no/stm8-binutils-gdb>
+  (a Debian package, an installer for macOS Apple Silicon and one for Windows; release `v15.0.50-stm8.2`
+  or newer)
 - an ST-Link (for example the one on a Nucleo-STM8S board, or a standalone ST-Link V2)
+
+`stm8-gdb` and `openocd` must be in the `PATH` of the program that starts the editor. On macOS start
+VS Code / VSCodium from a terminal (`code .`), not from the Dock. There is no `lsusb` on macOS, so the
+ST-Link check is skipped there and OpenOCD reports a missing board instead.
 
 No Node.js or npm is needed.
 
@@ -113,8 +156,8 @@ session, otherwise `make flash` as a task), *Debug* and the target chip (click t
 | message | what to do |
 |:--- |:- |
 | `Old toolchain – run STM8: Update Toolchain …` | the project has no `.make/vscode.mk`: run *STM8: Update Toolchain* (or copy `.make/` from a current toolchain by hand and add `-include .make/vscode.mk` as the last line of `Makefile`) |
-| `stm8-gdb 15 or newer is required` / `not found in PATH` | install the STM8 binutils-gdb build with Python and DAP support; on macOS also start VS Code / VSCodium from a terminal (`code .`), a program started from the Dock does not see the `PATH` of your shell |
-| `No ST-Link found on USB` | connect the board; on Linux check the udev rules |
+| `stm8-gdb 15 or newer is required` / `not found in PATH` | run the [installation](#installation) script again, or install the STM8 binutils-gdb build with Python and DAP support by hand; on Windows open a new editor window after the installation, on macOS also start VS Code / VSCodium from a terminal (`code .`), a program started from the Dock does not see the `PATH` of your shell |
+| `No ST-Link found on USB` | connect the board; on Linux check the udev rules, on Windows install the ST-Link driver ([STSW-LINK009](https://www.st.com/en/development-tools/stsw-link009.html)) |
 | `make debug is running (PID …)` | close the cgdb session, one debugger at a time |
 | `ST-Link may be in use by another OpenOCD …` | stop the other OpenOCD (`make openocd`, another editor window) |
 | `… timed out after 30 s` | the chip does not answer; check the cable and power, the OpenOCD log is `build-*-elf/openocd.log` |

@@ -313,12 +313,17 @@ cleanall: clean-spl-lib clean
 
 .PHONY: flash flash-elf flash-ihex stm8flash rebuild reflash
 
+# Windows: STVP, když je nainstalované, jinak OpenOCD (jako na Linuxu a macOS)
 # za běhu make debug jen přeloží ELF, do čipu ho nahraje debugger (ST-Link drží on)
 flash: $(if $(DEBUG_PID),elf,$(TARGET))
-ifeq ($(OS),Windows_NT)
-	+$(STVP) -BoardName=ST-LINK -Device=$(DEVICE_FLASH_STVP) -Port=USB -ProgMode=SWIM -no_loop -no_log -FileProg=$(TARGET)
-else ifneq ($(DEBUG_PID),)
+ifneq ($(DEBUG_PID),)
 	@printf "\033[1;33m*** Běží make debug – nový program do čipu nahraje debugger.\033[0m\n"
+else ifeq ($(OS),Windows_NT)
+	+if [ -f $(STVP) ]; then \
+		$(STVP) -BoardName=ST-LINK -Device=$(DEVICE_FLASH_STVP) -Port=USB -ProgMode=SWIM -no_loop -no_log -FileProg=$(TARGET); \
+	else \
+		$(OPENOCD) -c "init" -c "program_device $(TARGET) 0"; \
+	fi
 else
 	+$(OPENOCD) -c "init" -c "program_device $(TARGET) 0"
 endif
