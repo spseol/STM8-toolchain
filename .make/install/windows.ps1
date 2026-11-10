@@ -28,7 +28,7 @@ $CclsApi      = 'https://gitlab.com/api/v4/projects/spseol%2Fmit-no%2Fccls/relea
 $ExtensionId  = 'spseol.stm8-toolchain'
 $Blog         = 'https://chytrosti.marrek.cz/stm8install.html'
 # winget package ids; they are not verified yet, see the experimental note above
-$WingetIds    = @('Git.Git', 'ezwinports.make', 'Python.Python.3.12', 'xpack-dev-tools.openocd')
+$WingetIds    = @('Git.Git', 'ezwinports.make', 'Python.Python.3.12', 'xpack-dev-tools.openocd-xpack')
 $WingetEditor = 'VSCodium.VSCodium'
 
 $ErrorActionPreference = 'Stop'
