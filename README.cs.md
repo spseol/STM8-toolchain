@@ -35,8 +35,7 @@ Podporuje Linux, Windows i macOS.
 ## Použití
 
 Nejprve je třeba v `Makefile` správně nastavit µprocesor a jeho frekvenci;
-případně cestu k instalaci SDCC, 
-[STVP](https://www.st.com/en/development-tools/stvp-stm8.html).
+případně cestu k instalaci SDCC.
 
 ```make
 #DEVICE_FLASH=stm8s103f3
@@ -68,7 +67,7 @@ endif
 | `make cleanall` | smaže vše včetně SPL knihoven |
 | `make rebuild` | smaže vše a znovu zkompiluje (elf) |
 | `make reflash` | smaže vše a znovu nahraje |
-| `make flash` | nahraje ihx do chipu — [OpenOCD](https://openocd.org/) na Linuxu, [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) na Windows; když běží `make debug`, jen přeloží elf a do chipu ho nahraje debugger |
+| `make flash` | nahraje ihx do chipu — [OpenOCD](https://openocd.org/); na Windows [STVP](https://www.st.com/en/development-tools/stvp-stm8.html), je-li nainstalované, jinak taky OpenOCD; když běží `make debug`, jen přeloží elf a do chipu ho nahraje debugger |
 | `make flash-elf` | nahraje elf do chipu přes OpenOCD |
 | `make flash-ihex` | převede elf na ihex a nahraje přes OpenOCD |
 | `make stm8flash` | záložní metoda nahrávání (používá [stm8flash](https://github.com/vdudouyt/stm8flash)) |
@@ -204,13 +203,19 @@ a commitni sám. Vlastní změny v `.make/`, `Makefile` a `.vscode/launch.json` 
   (`stm8-gdb`, `stm8-ld`); pro ladění `stm8-gdb` 15 nebo novější s Pythonem a DAP
 * [OpenOCD](https://openocd.org/) pro `flash` a `debug`
 * [cgdb](https://cgdb.github.io/) pro `make debug` (bez něj se použije gdb TUI)
-  nebo [STVP](https://www.st.com/en/development-tools/stvp-stm8.html)
-  pro `flash` na Windows.
+* [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) -- jen Windows a nepovinné:
+  je-li nainstalované, použije ho `make flash`, jinak OpenOCD.
 * ([stm8flash](https://github.com/vdudouyt/stm8flash) pro `flash2`)
 
 ### Na Windows
 
-[`choco`](https://chocolatey.org/)` install git make vscode mingw`
+Všechno potřebné nainstaluje jeden příkaz v PowerShellu (podrobnosti v
+[README rozšíření pro VS Code](.make/vscode/README.md#installation)):
+
+```powershell
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex          # Chocolatey
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows-winget.ps1 | iex   # nebo winget
+```
 
 ## Tři Mejkfaily ....
 

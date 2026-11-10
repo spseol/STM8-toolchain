@@ -33,8 +33,7 @@ Supports Linux, Windows, and macOS.
 ## Usage
 
 First, you need to configure the microprocessor and its frequency in the `Makefile`;
-optionally the path to SDCC installation, or
-[STVP](https://www.st.com/en/development-tools/stvp-stm8.html).
+optionally the path to SDCC installation.
 
 ```make
 #DEVICE_FLASH=stm8s103f3
@@ -66,7 +65,7 @@ endif
 | `make cleanall` | deletes everything including SPL libraries |
 | `make rebuild` | cleans everything and recompiles (elf) |
 | `make reflash` | cleans everything and flashes again |
-| `make flash` | uploads ihx to the chip — [OpenOCD](https://openocd.org/) on Linux, [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) on Windows; while `make debug` is running it only builds the elf and the debugger uploads it |
+| `make flash` | uploads ihx to the chip — [OpenOCD](https://openocd.org/); on Windows [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) if it is installed, otherwise OpenOCD too; while `make debug` is running it only builds the elf and the debugger uploads it |
 | `make flash-elf` | uploads elf to the chip via OpenOCD |
 | `make flash-ihex` | converts elf to ihex and uploads via OpenOCD |
 | `make stm8flash` | alternative flash method (uses [stm8flash](https://github.com/vdudouyt/stm8flash)) |
@@ -208,13 +207,19 @@ for you to resolve). It never touches `src/`, `inc/` or your README and commits 
   (`stm8-gdb`, `stm8-ld`); `stm8-gdb` 15 or newer with Python and DAP for debugging
 * [OpenOCD](https://openocd.org/) for `flash` and `debug`
 * [cgdb](https://cgdb.github.io/) for `make debug` (gdb TUI is used without it)
-  or [STVP](https://www.st.com/en/development-tools/stvp-stm8.html)
-  for `flash` on Windows.
+* [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) -- Windows only and optional:
+  `make flash` uses it when it is installed, otherwise OpenOCD.
 * ([stm8flash](https://github.com/vdudouyt/stm8flash) for `flash2`)
 
 ### On Windows
 
-[`choco`](https://chocolatey.org/)` install git make vscode mingw`
+One command in PowerShell installs everything needed (details in the
+[extension README](.make/vscode/README.md#installation)):
+
+```powershell
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex          # Chocolatey
+irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows-winget.ps1 | iex   # or winget
+```
 
 ## Three Makefiles
 

@@ -2,6 +2,23 @@
 
 All notable changes to this extension are documented here.
 
+## 1.0.0 10-11-2026
+
+First stable release: the extension works on Linux, macOS (Apple Silicon) and Windows 10/11.
+
+### Added
+
+- Installation with one command per system (`.make/install/linux.sh`, `.make/install/macos.sh`,
+  `.make/install/windows.ps1` with Chocolatey, `.make/install/windows-winget.ps1` with winget). The scripts install the compiler,
+  OpenOCD, `stm8-gdb` and the extension, and install Homebrew (macOS) or Chocolatey (Windows) when missing.
+  See the README.
+
+### Changed
+
+- Windows: `make flash` (the *Flash* button) uses STVP when it is installed and OpenOCD otherwise, so
+  STVP is no longer needed. Use *Update Toolchain* to get the new `Makefile` in an existing project.
+- README: Windows is supported (the notes that it is not were removed), new *Installation* section.
+
 ## 0.3.4 09-11-2026
 
 ### Fixed
