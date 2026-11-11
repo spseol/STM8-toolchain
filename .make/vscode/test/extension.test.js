@@ -9,7 +9,7 @@ const { PassThrough } = require('node:stream');
 
 // extension.js needs the `vscode` module, which only exists inside the editor: a small fake.
 function load() {
-  const seen = { providers: {}, taskProviders: {}, factories: {}, trackers: {}, commands: {}, views: {}, panels: [], messages: [], executed: [], opened: [], shown: [], updates: [], picks: [], dialogs: [], inputs: [], projectsFolder: '' };
+  const seen = { providers: {}, taskProviders: {}, factories: {}, trackers: {}, commands: {}, views: {}, panels: [], messages: [], executed: [], opened: [], shown: [], updates: [], picks: [], dialogs: [], inputs: [], projectsFolder: '', cclsInstalled: true };
   class EventEmitter {
     constructor() {
       this.listeners = [];
@@ -94,6 +94,7 @@ function load() {
       }),
       openTextDocument: async (file) => { seen.opened.push(file); return { file }; },
     },
+    extensions: { getExtension: (id) => (seen.cclsInstalled && id === 'ccls-project.ccls' ? {} : undefined) },
     EventEmitter,
     DebugAdapterInlineImplementation: class { constructor(adapter) { this.adapter = adapter; } },
   };
@@ -111,11 +112,12 @@ function load() {
   }
 }
 
-const context = (stored = {}) => ({
+const context = (stored = {}, globalStored = {}) => ({
   subscriptions: [],
   extensionPath: '/ext',
   extension: { packageJSON: { version: '0.1.0' } },
   workspaceState: { get: (key) => stored[key], update: async (key, value) => { stored[key] = value; } },
+  globalState: { get: (key) => globalStored[key], update: async (key, value) => { globalStored[key] = value; } },
 });
 const folder = { uri: { fsPath: '/proj' } };
 const config = { type: 'stm8', request: 'launch', name: 'STM8 debug' };
@@ -810,4 +812,54 @@ test('new_project_failure_is_shown_and_nothing_is_opened', async () => {
   assert.deepStrictEqual(seen.messages, [['error', 'Cannot download the toolchain from X: no network']]);
   assert.deepStrictEqual(seen.executed, []);
   assert.ok(project);
+});
+
+// --- CCLS recommendation ----------------------------------------------------------------------
+
+const CCLS_QUESTION = 'CCLS adds code completion and navigation for STM8 C code. Install it?';
+function recommending({ choice, globalStored = {}, installed = false } = {}) {
+  const loaded = load();
+  loaded.project.versionNotice = () => null;
+  loaded.seen.cclsInstalled = installed;
+  loaded.seen.infoChoice = choice;
+  loaded.extension.activate(context({}, globalStored));
+  return { ...loaded, globalStored };
+}
+const cclsAsked = (seen) => messagesOf(seen, 'info').filter(([, text]) => text === CCLS_QUESTION);
+
+test('missing_ccls_is_recommended_with_install_later_and_never', async () => {
+  const { seen } = recommending();
+  await flush();
+  const [, , ...buttons] = cclsAsked(seen)[0];
+  assert.deepStrictEqual(buttons, ['Install CCLS', 'Later', "Don't remind me"]);
+});
+
+test('installed_ccls_is_not_recommended', async () => {
+  const { seen } = recommending({ installed: true });
+  await flush();
+  assert.strictEqual(cclsAsked(seen).length, 0);
+});
+
+test('install_click_runs_the_extension_install_command', async () => {
+  const { seen } = recommending({ choice: 'Install CCLS' });
+  await flush();
+  assert.deepStrictEqual(seen.executed, [['workbench.extensions.installExtension', 'ccls-project.ccls']]);
+});
+
+test('later_stores_nothing_so_it_is_asked_again', async () => {
+  const { globalStored, seen } = recommending({ choice: 'Later' });
+  await flush();
+  assert.deepStrictEqual(globalStored, {});
+  assert.deepStrictEqual(seen.executed, []);
+});
+
+test('dont_remind_is_remembered_globally', async () => {
+  const globalStored = {};
+  const { seen: first } = recommending({ choice: "Don't remind me", globalStored });
+  await flush();
+  assert.strictEqual(globalStored['stm8.ccls.dismissed'], true);
+  assert.strictEqual(cclsAsked(first).length, 1);
+  const { seen: second } = recommending({ globalStored });
+  await flush();
+  assert.strictEqual(cclsAsked(second).length, 0);
 });

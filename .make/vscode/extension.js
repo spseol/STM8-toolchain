@@ -12,6 +12,7 @@ const upgrade = require('./src/upgrade');
 const newproject = require('./src/newproject');
 const { registerBuildTask } = require('./src/tasks');
 const { applyTerminalEnv } = require('./src/platform');
+const { offerCcls } = require('./src/ccls');
 
 const TYPE = 'stm8';
 const RESUMING = new Set(['continue', 'next', 'stepIn', 'stepOut', 'stepBack', 'reverseContinue']);
@@ -276,6 +277,8 @@ function activate(context) {
       else if (choice === "Don't ask again") await context.workspaceState.update(DISMISSED, true);
     });
   }
+
+  guarded(() => offerCcls(vscode, context));
 }
 
 function deactivate() {}
