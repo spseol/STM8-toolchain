@@ -2,6 +2,17 @@
 
 All notable changes to this extension are documented here.
 
+## 1.0.2 11-11-2026
+
+### Added
+
+- Setting `stm8.checkToolchainUpdates` (default `true`, user settings or the project's `.vscode/settings.json`).
+  Set to `false` to switch off the messages shown when a project is opened: the offer to run
+  *Update Toolchain* (project older than the extension) and the notice that the project has a newer extension.
+  *Update Toolchain* and `make upgrade` still work.
+- When the CCLS extension (`ccls-project.ccls`) is missing, the extension offers to install it on activation.
+  Nothing is installed without a click; "Don't remind me" is remembered for all projects.
+
 ## 1.0.1 11-11-2026
 
 ### Changed
