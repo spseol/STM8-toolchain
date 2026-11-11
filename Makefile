@@ -123,12 +123,6 @@ else
 	PYTHON := $(or $(firstword $(foreach p,python3 python,$(if $(shell command -v $(p) 2>/dev/null),$(p)))),python3)
 endif
 
-ifeq ($(uname_S),Darwin)
-    TAR_TRANSFORM = -s '%spl-main/%%'
-else
-    TAR_TRANSFORM = --transform='s%spl-main/%%'
-endif
-
 # trap handling requires SDCC >=v3.4.3
 SKIP_TRAPS = 1
 
@@ -406,14 +400,22 @@ baudrate:
 switch-device: clean
 	+PYTHON=$(PYTHON) bash .make/switch_device.sh $(CHIP)
 
-../SPL.tgz:
-	curl https://gitlab.com/spseol/mit-no/spl/-/archive/main/spl-main.tar.gz --output ../SPL.tgz
-../SPL: | ../SPL.tgz
-	tar -C .. $(TAR_TRANSFORM) -xzf ../SPL.tgz spl-main/SPL/
-	@printf "***********************************************************\n*  SPL byla rozbalena. Možná je třeba znovu spusti make   *\n***********************************************************\n"
-../SPLSPL: | ../SPL.tgz
-	tar -C .. $(TAR_TRANSFORM) -xzf ../SPL.tgz spl-main/SPLSPL/
-	@printf "***********************************************************\n*  SPL byla rozbalena. Možná je třeba znovu spusti make   *\n***********************************************************\n"
+SPL_GIT ?= https://gitlab.com/spseol/mit-no/spl.git
+# git clone: anonymní Git přes HTTPS GitLab nepočítá do limitu 60 požadavků/h na IP (curl archivu ano).
+# Receptem chybějící složku doplní obě (SPL i SPLSPL); druhé pravidlo pak nemá co dělat.
+define spl_fetch
+	@if [ ! -d $@ ]; then \
+		rm -rf ../.spl-clone && \
+		git clone --depth 1 --quiet $(SPL_GIT) ../.spl-clone && \
+		for d in SPL SPLSPL; do [ -d ../$$d ] || mv ../.spl-clone/$$d ..; done && \
+		rm -rf ../.spl-clone && \
+		printf "***********************************************************\n*  SPL byla stažena. Možná je třeba znovu spustit make    *\n***********************************************************\n"; \
+	fi
+endef
+../SPL:
+	$(spl_fetch)
+../SPLSPL: | ../SPL
+	$(spl_fetch)
 $(SPL_SRC_DIR): | ../SPL ../SPLSPL
 
 .PHONY: spl spl-renew tree lib

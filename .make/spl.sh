@@ -18,14 +18,8 @@ any_dir_not_exists() {
 
 if any_dir_not_exists ${SPLS[@]} ; then
 
-    curl https://gitlab.com/spseol/mit-no/spl/-/archive/main/spl-main.tar.gz --output spl.tgz
-    if [[ "$(uname -s)" == "Darwin" ]]; then
-        COPYFILE_DISABLE=1 tar -xf spl.tgz
-    else
-        tar xzf spl.tgz
-    fi
-    mv spl.tgz ../SPL.tgz
-
+    # git clone: anonymní Git přes HTTPS GitLab nepočítá do limitu 60 požadavků/h na IP
+    git clone --depth 1 --quiet https://gitlab.com/spseol/mit-no/spl.git spl-main
     for dir in ${SPLS[@]}; do
         if ! [ -d ../$dir ]; then
             echo "Nahrávám $dir"
@@ -33,7 +27,7 @@ if any_dir_not_exists ${SPLS[@]} ; then
         fi
     done
 
-    rm -R spl-main
+    rm -rf spl-main
 
 else
     echo "... ${SPLS[@]} již existují."

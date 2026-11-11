@@ -1,30 +1,31 @@
 # One-command installer of the STM8S toolchain tools for Windows 10/11 (x64).
 #
-#   irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
+#   irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows.ps1 | iex
 #
 # Run it in PowerShell. It asks for administrator rights (UAC) once and installs:
 #   * with Chocolatey (default; installed when missing) or with winget: git, make, python, openocd
 #     [and vscodium, when neither VS Code nor VSCodium is found],
 #   * SDCC (installer from SourceForge, into the default folder C:\Program Files\SDCC),
-#   * stm8-gdb (STM8 binutils-gdb installer from GitLab, adds itself to PATH),
-#   * ccls (optional, installer from GitLab),
+#   * stm8-gdb (STM8 binutils-gdb installer from GitHub, adds itself to PATH),
+#   * ccls (optional, installer from GitHub),
 #   * the VS Code / VSCodium extension.
 # Not installed: the ST-Link driver and STVP (ST publishes them after registration; flashing
 # works through OpenOCD without STVP).
 #
 # Both package managers work equally. To use winget instead of Chocolatey:
-#   $STM8_PM = 'winget'; irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
+#   $STM8_PM = 'winget'; irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows.ps1 | iex
 #
 # Safe to run again: what is installed already is skipped.
 # A manual installation and details: https://chytrosti.marrek.cz/stm8install.html#windows
 
 # --- settings (a variable set before running overrides the default) ---------------------
 if (-not $STM8_PM)   { $STM8_PM   = 'choco' }   # 'choco' or 'winget'
-if (-not $STM8_BASE) { $STM8_BASE = 'https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install' }
+if (-not $STM8_BASE) { $STM8_BASE = 'https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install' }
 $SdccVersion  = '4.6.0'                         # 4.5.0 is broken for STM8
 $SdccDir      = "$env:ProgramFiles\SDCC"       # Makefile-sdcc expects this exact folder
-$GdbApi       = 'https://gitlab.com/api/v4/projects/spseol%2Fmit-no%2Fstm8-binutils-gdb/releases/permalink/latest'
-$CclsApi      = 'https://gitlab.com/api/v4/projects/spseol%2Fmit-no%2Fccls/releases?per_page=1'
+# Fixed asset names behind releases/latest/download: no API call, so GitHub API limits do not apply.
+$GdbUrl       = 'https://github.com/spseol/STM8-binutils-GDB/releases/latest/download/stm8-binutils-gdb-windows-x64-setup.exe'
+$CclsUrl      = 'https://github.com/spseol/ccls/releases/latest/download/ccls-windows-x64-setup.exe'
 $ExtensionId  = 'spseol.stm8-toolchain'
 $Blog         = 'https://chytrosti.marrek.cz/stm8install.html'
 # winget package ids
@@ -126,12 +127,8 @@ try {
     }
     if ($needGdb) {
         Say 'Installing stm8-gdb'
-        $rel = Invoke-RestMethod -Uri $GdbApi
-        $asset = $rel.assets.links | Where-Object { $_.name -eq 'stm8-binutils-gdb-windows-x64-setup.exe' } | Select-Object -First 1
-        if (-not $asset) { throw 'stm8-gdb installer not found in the latest release: https://gitlab.com/spseol/mit-no/stm8-binutils-gdb/-/releases' }
-        $file = Join-Path $tmp $asset.name
-        $url = if ($asset.direct_asset_url) { $asset.direct_asset_url } else { $asset.url }
-        Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $file
+        $file = Join-Path $tmp 'stm8-binutils-gdb-windows-x64-setup.exe'
+        Invoke-WebRequest -UseBasicParsing -Uri $GdbUrl -OutFile $file
         Invoke-Installer $file '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /ALLUSERS /TASKS=addpath'
         Update-SessionPath
     }
@@ -140,12 +137,8 @@ try {
     if (-not (Test-Tool 'ccls')) {
         Say 'Installing ccls (optional)'
         try {
-            $rel = (Invoke-RestMethod -Uri $CclsApi)[0]
-            $asset = $rel.assets.links | Where-Object { $_.name -like 'ccls-*-windows-x64-setup.exe' } | Select-Object -First 1
-            if (-not $asset) { throw 'installer not found in the latest release' }
-            $file = Join-Path $tmp $asset.name
-            $url = if ($asset.direct_asset_url) { $asset.direct_asset_url } else { $asset.url }
-            Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $file
+            $file = Join-Path $tmp 'ccls-windows-x64-setup.exe'
+            Invoke-WebRequest -UseBasicParsing -Uri $CclsUrl -OutFile $file
             Invoke-Installer $file '/S'
             Update-SessionPath
             if (-not (Test-Tool 'ccls')) { Warn 'ccls installed but not in PATH. Add it in the installer by hand, or use the clangd extension instead.' }

@@ -11,7 +11,7 @@ Supports Linux, Windows, and macOS.
 
 * *build* using the free [SDCC](http://sdcc.sourceforge.net/) compiler
 * *flash* via [OpenOCD](https://openocd.org/) or [stm8flash](https://github.com/vdudouyt/stm8flash)
-* *debug* with [STM8 GDB](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) (`stm8-gdb`) and `cgdb`, or in VS Code / VSCodium
+* *debug* with [STM8 GDB](https://github.com/spseol/STM8-binutils-GDB) (`stm8-gdb`) and `cgdb`, or in VS Code / VSCodium
 * SPL integration and VS Code / clangd support via `compile_commands.json`
 
 ## How does it work?
@@ -86,11 +86,11 @@ endif
 
 ## Debugging
 
-Debugging needs `stm8-gdb`: [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb), a fork of GNU binutils-gdb
+Debugging needs `stm8-gdb`: [STM8 binutils-gdb](https://github.com/spseol/STM8-binutils-GDB), a fork of GNU binutils-gdb
 with STM8 support, version 15 or newer, with Python and Debug Adapter Protocol (DAP) support (the DAP is needed
 for VS Code). It is not part of this toolchain: install it first. The repository has a Debian package
 (APT) and the build instructions for Linux and macOS (Apple Silicon). For macOS (Apple Silicon) there is a
-prebuilt package with Python bundled in its [releases](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb/-/releases)
+prebuilt package with Python bundled in its [releases](https://github.com/spseol/STM8-binutils-GDB/releases)
 (`v15.0.50-stm8.2` or newer; the older `v15.0.50-stm8.1` has no Python).
 
 `make debug` does everything at once: it builds the project with debug info,
@@ -171,7 +171,7 @@ Single bits of such registers cannot be changed (the write would read the regist
 has *Build*, *Flash*, *Debug* and the target chip (click it to switch). Details and troubleshooting:
 [`.make/vscode/README.md`](.make/vscode/README.md).
 
-It needs [`stm8-gdb`](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) 15 or newer (it is not part of the extension, install it first) and `openocd`
+It needs [`stm8-gdb`](https://github.com/spseol/STM8-binutils-GDB) 15 or newer (it is not part of the extension, install it first) and `openocd`
 in `PATH`, as `make debug` does. The extension is tested on Linux. On macOS (Apple Silicon) it has been verified with a
 Nucleo-STM8S208RB: `make`, `make flash`, `make cgdb` and debugging in the extension (`stm8-gdb` from the prebuilt package,
 OpenOCD and SDCC from Homebrew). `stm8-gdb` and `openocd` must be in the `PATH` of the program that starts the
@@ -203,7 +203,7 @@ for you to resolve). It never touches `src/`, `inc/` or your README and commits 
   it can be installed together with [Git](https://git-scm.com/download/win).
 * [SDCC](http://sdcc.sourceforge.net/)
   or [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)
-* [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) -- a fork of GNU binutils-gdb with STM8 support
+* [STM8 binutils-gdb](https://github.com/spseol/STM8-binutils-GDB) -- a fork of GNU binutils-gdb with STM8 support
   (`stm8-gdb`, `stm8-ld`); `stm8-gdb` 15 or newer with Python and DAP for debugging
 * [OpenOCD](https://openocd.org/) for `flash` and `debug`
 * [cgdb](https://cgdb.github.io/) for `make debug` (gdb TUI is used without it)
@@ -217,8 +217,8 @@ One command in PowerShell installs everything needed (details in the
 [extension README](.make/vscode/README.md#installation)):
 
 ```powershell
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex          # Chocolatey
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows-winget.ps1 | iex   # or winget
+irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows.ps1 | iex          # Chocolatey
+irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows-winget.ps1 | iex   # or winget
 ```
 
 ## Three Makefiles

@@ -9,7 +9,7 @@ from conftest import ROOT
 
 INSTALL = ROOT / ".make" / "install"
 README = ROOT / ".make" / "vscode" / "README.md"
-RAW = "https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/"
+RAW = "https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/"
 
 
 def test_install_dir_is_not_given_to_students():
@@ -69,3 +69,23 @@ def test_flash_on_windows_falls_back_to_openocd():
     recipe = makefile[makefile.index("\nflash:"):makefile.index("\nflash-elf:")]
     windows = recipe[recipe.index("ifeq ($(OS),Windows_NT)"):recipe.index("\nelse\n")]
     assert "if [ -f $(STVP) ]" in windows and "$(OPENOCD)" in windows
+
+
+def test_downloads_do_not_use_gitlab_web_or_api():
+    """GitLab.com limits anonymous web and API requests to 60 per hour per IP (since 2026-10-19).
+    Anonymous Git over HTTPS is exempt, so `git clone` of GitLab is fine."""
+    files = list(INSTALL.iterdir()) + [ROOT / ".make" / n for n in ("Makefile-sdcc", "Makefile-sdcc-gas", "spl.sh")]
+    for f in files:
+        text = f.read_text()
+        for bad in ("gitlab.com/api", "/-/raw/", "/-/archive/", "/-/releases/"):
+            assert bad not in text, f"{f.name} uses {bad}"
+
+
+def test_release_assets_have_fixed_names_without_api():
+    win = (INSTALL / "windows.ps1").read_text()
+    mac = (INSTALL / "macos.sh").read_text()
+    for text in (win, mac):
+        assert "Invoke-RestMethod" not in text and "api.github.com" not in text
+    assert "STM8-binutils-GDB/releases/latest/download/stm8-binutils-gdb-windows-x64-setup.exe" in win
+    assert "spseol/ccls/releases/latest/download/ccls-windows-x64-setup.exe" in win
+    assert "STM8-binutils-GDB/releases/latest/download/${PKG_NAME}" in mac

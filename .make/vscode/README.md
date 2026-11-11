@@ -30,13 +30,13 @@ installs them all and then the extension itself. Run it in a terminal, once per 
 **Linux** (Debian, Ubuntu, Mint and other Debian-based distributions, amd64):
 
 ```sh
-curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/linux.sh | bash
+curl -fsSL https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/linux.sh | bash
 ```
 
 **macOS** (Apple Silicon): installs Homebrew first if you do not have it.
 
 ```sh
-curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/macos.sh | bash
+curl -fsSL https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/macos.sh | bash
 ```
 
 **Windows 10/11**: open *PowerShell* and run one of the two (they do the same, choose the package manager
@@ -45,19 +45,19 @@ you prefer). The script asks for administrator rights once.
 With [Chocolatey](https://chocolatey.org) (installed when you do not have it):
 
 ```powershell
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex
+irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows.ps1 | iex
 ```
 
 With winget (in Windows 10/11 already):
 
 ```powershell
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows-winget.ps1 | iex
+irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows-winget.ps1 | iex
 ```
 
 Then open VS Code or VSCodium and run **`STM8: New Project…`**. On macOS start the editor from a
 terminal (`code .`), see [Requirements](#requirements).
 
-The scripts are short and readable, [take a look](https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/tree/main/.make/install) before you run them. Run them again any time:
+The scripts are short and readable, [take a look](https://github.com/spseol/STM8-toolchain/tree/main/.make/install) before you run them. Run them again any time:
 what is installed already is skipped. The ST-Link driver for Windows is not installed by the script
 (ST publishes it after registration): if the board is not found, install
 [STSW-LINK009](https://www.st.com/en/development-tools/stsw-link009.html).
@@ -76,7 +76,7 @@ set all of this up; the list is for those who install the tools by hand:
 - [SDCC](http://sdcc.sourceforge.net/) (the compiler), **not version 4.5.0**: it is broken for STM8
 - `openocd`
 - `stm8-gdb` **15 or newer**, built with Python and Debug Adapter Protocol support. It is not part of
-  the extension. It comes from the STM8 binutils-gdb build: <https://gitlab.com/spseol/mit-no/stm8-binutils-gdb>
+  the extension. It comes from the STM8 binutils-gdb build: <https://github.com/spseol/STM8-binutils-GDB>
   (a Debian package, an installer for macOS Apple Silicon and one for Windows; release `v15.0.50-stm8.2`
   or newer)
 - an ST-Link (for example the one on a Nucleo-STM8S board, or a standalone ST-Link V2)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-command installer of the STM8S toolchain tools for macOS (Apple Silicon).
 #
-#   curl -fsSL https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/macos.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/macos.sh | bash
 #
 # Installs (when missing): Command Line Tools, Homebrew, make, git, SDCC, OpenOCD, cgdb,
 # ccls, stm8-gdb (STM8 binutils-gdb, prebuilt package with its own Python), VSCodium
@@ -15,8 +15,9 @@
 
 set -euo pipefail
 
-GITLAB_API="https://gitlab.com/api/v4/projects/spseol%2Fmit-no%2Fstm8-binutils-gdb"
 PKG_NAME="stm8-binutils-gdb-macos-arm64.pkg"
+# Fixed asset name behind releases/latest/download: no API call, no rate limit of the API.
+PKG_URL="https://github.com/spseol/STM8-binutils-GDB/releases/latest/download/${PKG_NAME}"
 EXTENSION_ID="spseol.stm8-toolchain"
 BLOG="https://chytrosti.marrek.cz/stm8install.html"
 
@@ -68,14 +69,6 @@ elif [ "$(uname -m)" = "arm64" ]; then
     say "Installing stm8-gdb (prebuilt package; asks for your password)"
     TMP="$(mktemp -d)"
     trap 'rm -rf "${TMP}"' EXIT
-    PKG_URL="$(curl -fsSL -L "${GITLAB_API}/releases/permalink/latest" \
-        | python3 -c 'import json,sys
-name = sys.argv[1]
-for l in json.load(sys.stdin)["assets"]["links"]:
-    if l["name"] == name:
-        print(l.get("direct_asset_url") or l["url"])
-        break' "${PKG_NAME}")"
-    [ -n "${PKG_URL}" ] || die "Package ${PKG_NAME} not found in the latest release: ${GITLAB_API%/api*}"
     curl -fSL "${PKG_URL}" -o "${TMP}/${PKG_NAME}"
     sudo installer -pkg "${TMP}/${PKG_NAME}" -target /
 fi

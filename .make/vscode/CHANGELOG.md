@@ -2,6 +2,18 @@
 
 All notable changes to this extension are documented here.
 
+## 1.0.1 11-11-2026
+
+### Changed
+
+- The installation scripts and the `stm8-gdb` and `ccls` installers are downloaded from GitHub
+  (`spseol/STM8-toolchain`, `spseol/STM8-binutils-GDB`, `spseol/ccls`) instead of GitLab, because
+  GitLab.com limits anonymous web and API requests to 60 per hour per IP address (a school network shares
+  one address). The installers use fixed file names, no API call is needed.
+- `make spl` downloads the SPL libraries with `git clone` (anonymous Git over HTTPS is not limited) instead
+  of a `curl` of an archive. Use *Update Toolchain* to get the new `Makefile` in an existing project.
+- README: new commands and links for the installation.
+
 ## 1.0.0 10-11-2026
 
 First stable release: the extension works on Linux, macOS (Apple Silicon) and Windows 10/11.
