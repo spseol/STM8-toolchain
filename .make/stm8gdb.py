@@ -166,15 +166,15 @@ def connect():
 def ensure_connected():
     if is_connected():
         return
-    say("Připojuji se k čipu…", "1;36")
+    say("Connecting to the chip…", "1;36")
     if connect():
         return
-    warn("Nepodařilo se připojit k čipu. Je ST-Link připojený a čip napájený?")
+    warn("Cannot connect to the chip. Is the ST-Link plugged in and the chip powered?")
     for line in openocd_errors():
         warn("  " + line)
     if not os.environ.get("STM8_OPENOCD"):
-        warn("Ladění spouštěj přes: make debug")
-    raise gdb.GdbError("Bez připojení k čipu nejde ladit.")
+        warn("Start debugging with: make debug")
+    raise gdb.GdbError("Cannot debug without a connection to the chip.")
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ def ensure_connected():
 
 
 def build():
-    say("Překládám (make elf)…", "1;36")
+    say("Building (make elf)…", "1;36")
     # vnější make (make debug) by předal svůj jobserver a úroveň zanoření
     env = {
         k: v
@@ -211,7 +211,7 @@ def load():
     finally:
         state["busy"] = False
     size = [line for line in out.splitlines() if "load size" in line]
-    say("Nahráno do čipu." + (f" ({size[0].strip()})" if size else ""))
+    say("Flashed to the chip." +(f" ({size[0].strip()})" if size else ""))
 
 
 def restart():
@@ -235,9 +235,9 @@ def reload(reason):
         if dap_mode():
             start_watcher()
     except gdb.error as e:
-        warn(f"Nahrání selhalo: {e}")
+        warn(f"Flashing failed: {e}")
         if dap_mode():  # příkaz run v rozšíření musí selhat, ne jen varovat
-            raise gdb.GdbError(f"Nahrání selhalo: {e}")
+            raise gdb.GdbError(f"Flashing failed: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -277,16 +277,16 @@ def on_elf_changed():
     if target_running():
         # program běží → zastavit, nahrání dokončí on_stop()
         state["pending"] = True
-        say("\nProgram se změnil – zastavuji čip…", "1;33")
+        say("\nProgram changed – halting the chip…", "1;33")
         gdb.execute("interrupt")
         return
-    reload("\nProgram se změnil – nahrávám do čipu…")
+    reload("\nProgram changed – flashing to the chip…")
 
 
 def on_stop(event):
     if state["pending"]:
         state["pending"] = False
-        gdb.post_event(lambda: reload("\nNahrávám nový program do čipu…"))
+        gdb.post_event(lambda: reload("\nFlashing the new program to the chip…"))
         return
     if dap_mode():  # proměnné a display ukazuje VS Code
         return
@@ -378,7 +378,7 @@ def save_displays():
     try:
         if exprs:
             with open(DISPLAY_FILE, "w") as f:
-                f.write("# display pro make debug, jeden výraz na řádek (ukládá se samo)\n")
+                f.write("# display list for make debug, one expression per line (saved automatically)\n")
                 f.write("".join(e + "\n" for e in exprs))
         elif os.path.exists(DISPLAY_FILE):
             os.remove(DISPLAY_FILE)
@@ -491,8 +491,8 @@ gdb.pretty_printers.append(color_printer)
 
 
 class FlashCommand(gdb.Command):
-    """Přeloží projekt (make elf), nahraje ho do čipu a zastaví na main().
-Použití: flash"""
+    """Build the project (make elf), flash it to the chip and stop at main().
+Usage: flash"""
 
     def __init__(self):
         super().__init__("flash", gdb.COMMAND_RUNNING)
@@ -505,13 +505,13 @@ Použití: flash"""
         finally:
             state["busy"] = False
         if not ok:
-            raise gdb.GdbError("Překlad selhal, do čipu se nic nenahrálo.")
-        reload("Nahrávám do čipu…")
+            raise gdb.GdbError("Build failed, nothing was flashed to the chip.")
+        reload("Flashing to the chip…")
 
 
 class ResetCommand(gdb.Command):
-    """Resetuje čip a nechá program doběhnout na main().
-Použití: reset"""
+    """Reset the chip and let the program run to main().
+Usage: reset"""
 
     def __init__(self):
         super().__init__("reset", gdb.COMMAND_RUNNING)
@@ -523,9 +523,9 @@ Použití: reset"""
 
 
 class RunCommand(gdb.Command):
-    """Spustí program znovu od začátku a zastaví na main().
-Když je ELF novější než program v čipu, nejdřív ho nahraje.
-Nahrazuje původní run/start, které s OpenOCD nefungují (F5 v cgdb)."""
+    """Restart the program from the beginning and stop at main().
+If the ELF is newer than the program in the chip, flash it first.
+Replaces the original run/start, which do not work with OpenOCD (F5 in cgdb)."""
 
     def __init__(self, name):
         super().__init__(name, gdb.COMMAND_RUNNING)
@@ -533,17 +533,17 @@ Nahrazuje původní run/start, které s OpenOCD nefungují (F5 v cgdb)."""
     def invoke(self, arg, from_tty):
         self.dont_repeat()
         if not is_connected() or elf_stamp() != state["loaded"]:
-            reload("Nahrávám do čipu…")
+            reload("Flashing to the chip…")
         else:
             restart()
 
 
 class VarsCommand(gdb.Command):
-    """Vypíše argumenty a lokální proměnné aktuální funkce.
-Použití: vars       vypiš teď
-         vars on    vypisuj po každém zastavení (výchozí)
-         vars off   nevypisuj automaticky
-Globální proměnné: display jméno"""
+    """Print the arguments and local variables of the current function.
+Usage: vars       print now
+       vars on    print after every stop (default)
+       vars off   do not print automatically
+Global variables: display name"""
 
     def __init__(self):
         super().__init__("vars", gdb.COMMAND_DATA)
@@ -552,9 +552,9 @@ Globální proměnné: display jméno"""
         arg = arg.strip()
         if arg in ("on", "off"):
             state["autovars"] = arg == "on"
-            say(f"Automatický výpis proměnných: {arg}")
+            say(f"Automatic variable printing: {arg}")
         elif arg:
-            raise gdb.GdbError("Použití: vars [on|off]")
+            raise gdb.GdbError("Usage: vars [on|off]")
         else:
             show_vars()
 
@@ -567,29 +567,29 @@ VarsCommand()
 
 
 def banner():
-    """Nápověda po startu; příkazy a klávesy jsou ve zpětných apostrofech."""
+    """Help shown after start; commands and keys are in backticks."""
     ui = os.environ.get("STM8_UI")
     lines = []
     if ui == "cgdb":
         lines += [
-            "cgdb  `Esc` = okno se zdrojákem, `i` = zpět do gdb",
-            "      ve zdrojáku: `mezerník` = breakpoint, `F5` znovu od main(),"
+            "cgdb  `Esc` = source window, `i` = back to gdb",
+            "      in the source: `Space` = breakpoint, `F5` restart from main(),"
             " `F6` continue, `F7` finish, `F8` next, `F10` step",
         ]
     elif ui == "tui":
         lines += [
-            "TUI   `Ctrl-x s` = režim jedné klávesy (`n s f c r v`, `q` = konec),"
-            " `Ctrl-x a` = TUI vyp/zap",
+            "TUI   `Ctrl-x s` = single-key mode (`n s f c r v`, `q` = quit),"
+            " `Ctrl-x a` = TUI off/on",
         ]
     lines += [
-        "gdb   `n` = další řádek, `s` = do funkce, `finish` = z funkce,"
-        " `c` = pokračuj, `Ctrl-C` = zastav",
-        "      `b 42` = breakpoint na řádku 42, `p x` = vypiš x,"
-        " `display x` = vypisuj x po každém kroku (pamatuje se i pro příště)",
-        "STM8  `flash` = přelož + nahraj + main(), `reset` / `r` = znovu od main(),"
-        " `vars [on|off]` = proměnné",
-        "      `make flash` v jiném terminálu nový program do čipu nahraje sám",
-        "SFR   `sfr` = periferie, `sfr TIM4` = registry, `sfr TIM4.CR1` = bity,"
+        "gdb   `n` = next line, `s` = step into, `finish` = step out,"
+        " `c` = continue, `Ctrl-C` = stop",
+        "      `b 42` = breakpoint at line 42, `p x` = print x,"
+        " `display x` = print x after every step (remembered for next time)",
+        "STM8  `flash` = build + flash + main(), `reset` / `r` = restart from main(),"
+        " `vars [on|off]` = variables",
+        "      `make flash` in another terminal flashes the new program by itself",
+        "SFR   `sfr` = peripherals, `sfr TIM4` = registers, `sfr TIM4.CR1` = bits,"
         " `display GPIOB->ODR`, `set var GPIOD->ODR |= 0x10`",
     ]
     say("─" * 30 + " STM8 debug " + "─" * 30, "1;36")
@@ -608,11 +608,11 @@ def stm8_start():
     load_displays()
     state["elf"] = gdb.current_progspace().filename
     if not state["elf"]:
-        warn("gdb nemá ELF. Spusť ladění přes: make debug")
+        warn("gdb has no ELF. Start debugging with: make debug")
         return
     start_watcher()
     try:
-        reload("Nahrávám do čipu…")
+        reload("Flashing to the chip…")
     except gdb.GdbError as e:
         warn(str(e))
     banner()

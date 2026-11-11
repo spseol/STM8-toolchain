@@ -13,12 +13,12 @@ def test_dap_mode_quiet_start():
     text = proc.stdout + proc.stderr
     assert "styling is disabled" in text
     assert "STM8 debug" not in text  # banner
-    assert "nemá ELF" not in text
+    assert "has no ELF" not in text
 
 
 def test_cgdb_mode_unchanged_without_elf():
     proc = gdb_init([], ui=None)
-    assert "gdb nemá ELF" in proc.stdout + proc.stderr
+    assert "gdb has no ELF" in proc.stdout + proc.stderr
 
 
 def dollar_line(proc):
@@ -81,7 +81,7 @@ def test_elf_change_reloads():
         assert make.returncode == 0, make.stdout + make.stderr
         client.wait_event("stopped", timeout=20)  # the watcher reloaded the chip and ran to main()
         assert top_frame(client, thread)["name"] == "main"
-        assert "změnil" in client.output_text()
+        assert "changed" in client.output_text()
     finally:
         client.close()
 
@@ -120,7 +120,7 @@ def test_cgdb_regression():
     text = proc.stdout + proc.stderr
     assert "ARPE" in text  # sfr: bit by bit with descriptions
     assert "$1 = 0x00 0000 0000" in text  # print: pretty-printed register
-    assert "Nahráno do čipu" in text  # flash: build, load, run to main
+    assert "Flashed to the chip" in text  # flash: build, load, run to main
 
 
 def test_connect_string_quotes_the_log_path():

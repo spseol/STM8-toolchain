@@ -53,7 +53,7 @@ if __name__ == "__main__":
     sdcc_inc = get_sdcc_include(cc_root)
 
     if len(argv) == 1:
-        device, index = pick(DEVICES.split(), "Vyber cílové zařízení:")
+        device, index = pick(DEVICES.split(), "Select the target device:")
         path = PATH.format(device=device)
     else:
         try:
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             path = "tento soubor prostě a jednoduše nemůže existovat!!!!!!!!!"
 
     if not os.path.isfile(path):
-        print("Zadej existující mikrokontroler:")
+        print("Enter an existing microcontroller:")
         print(DEVICES)
         exit(1)
 

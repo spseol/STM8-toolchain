@@ -104,7 +104,7 @@ test('error_shows_openocd_tail_and_busy_hint', async (t) => {
   s.proxy.handleMessage(request(3, 'configurationDone'));
   await until(() => s.event('terminated'));
   const text = s.output();
-  assert.match(text, /run failed: Nahrání selhalo: boom/);
+  assert.match(text, /run failed: Flashing failed: boom/);
   assert.match(text, /libusb_open\(\) failed/);
   assert.match(text, /ST-Link may be in use by another OpenOCD/);
 });

@@ -176,7 +176,7 @@ def from_c(sources, cc, cpp_flags, inc_dir):
             if baud is None:
                 if not DECL_RE.match(arg):  # prototyp funkce není chyba
                     log(f"{fname}:{lineno}: {m.group(1)}_Init({arg}, …) "
-                        "nelze vyhodnotit")
+                        "cannot be evaluated")
                 continue
             results.append((m.group(1), baud,
                             f"{fname}:{lineno}, {m.group(1)}_Init"))
@@ -238,7 +238,7 @@ def from_asm(asm_dir, f_cpu):
                 if base not in UART_BASES:
                     continue
                 if value is None:
-                    log(f"{where}: zápis do BRR nelze vyhodnotit")
+                    log(f"{where}: BRR write cannot be evaluated")
                     continue
                 if addr - base == 3:
                     brr2[base] = value
@@ -258,11 +258,11 @@ def from_asm(asm_dir, f_cpu):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--cc", default="sdcc", help="překladač (sdcc)")
-    p.add_argument("--cpp", default="", help="flagy pro preprocesor")
+    p.add_argument("--cc", default="sdcc", help="compiler (sdcc)")
+    p.add_argument("--cpp", default="", help="preprocessor flags")
     p.add_argument("--fcpu", type=int, default=16000000)
-    p.add_argument("--asm", default=None, help="adresář s *.asm")
-    p.add_argument("--inc", default="inc", help="adresář s *.h projektu")
+    p.add_argument("--asm", default=None, help="directory with *.asm")
+    p.add_argument("--inc", default="inc", help="project directory with *.h")
     p.add_argument("sources", nargs="*")
     args = p.parse_args()
 
@@ -274,14 +274,14 @@ def main():
     if not results and args.asm:
         results = from_asm(args.asm, args.fcpu)
     if not results:
-        log("v projektu jsem baud rate nenašel")
+        log("no baud rate found in the project")
         return
 
     uart1 = [r for r in results if r[0] == "UART1"]
     chosen = (uart1 or results)[0]
     others = {r[1] for r in results if r[0] == chosen[0]} - {chosen[1]}
     if others:
-        log(f"pozor, {chosen[0]} se nastavuje i na "
+        log(f"warning: {chosen[0]} is also set to "
             + ", ".join(map(str, sorted(others))))
     log(f"{chosen[1]} ({chosen[2]})")
     print(chosen[1])

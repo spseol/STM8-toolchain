@@ -30,7 +30,7 @@ const parser = createParser((req) => {
       if (req.arguments.expression !== 'run') {
         respond(req, true, { result: 'fake', variablesReference: 0 });
       } else if (mode === 'error-run') {
-        respond(req, false, {}, 'Nahrání selhalo: boom');
+        respond(req, false, {}, 'Flashing failed: boom');
       } else {
         respond(req, true, { result: '', variablesReference: 0 });
         out({ type: 'event', event: 'stopped', body: { reason: 'breakpoint', threadId: 1 } });

@@ -311,7 +311,7 @@ cleanall: clean-spl-lib clean
 # za běhu make debug jen přeloží ELF, do čipu ho nahraje debugger (ST-Link drží on)
 flash: $(if $(DEBUG_PID),elf,$(TARGET))
 ifneq ($(DEBUG_PID),)
-	@printf "\033[1;33m*** Běží make debug – nový program do čipu nahraje debugger.\033[0m\n"
+	@printf "\033[1;33m*** make debug is running – the debugger flashes the new program to the chip.\033[0m\n"
 else ifeq ($(OS),Windows_NT)
 	+if [ -f $(STVP) ]; then \
 		$(STVP) -BoardName=ST-LINK -Device=$(DEVICE_FLASH_STVP) -Port=USB -ProgMode=SWIM -no_loop -no_log -FileProg=$(TARGET); \
@@ -409,7 +409,7 @@ define spl_fetch
 		git clone --depth 1 --quiet $(SPL_GIT) ../.spl-clone && \
 		for d in SPL SPLSPL; do [ -d ../$$d ] || mv ../.spl-clone/$$d ..; done && \
 		rm -rf ../.spl-clone && \
-		printf "***********************************************************\n*  SPL byla stažena. Možná je třeba znovu spustit make    *\n***********************************************************\n"; \
+		printf "***********************************************************\n*  SPL was downloaded. You may need to run make again.    *\n***********************************************************\n"; \
 	fi
 endef
 ../SPL:

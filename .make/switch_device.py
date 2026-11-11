@@ -21,8 +21,8 @@ DEVICES = available()  # only what ../SPLSPL/mk can build
 if not DEVICES:
     sys.exit("No chip can be selected: ../SPLSPL/mk has no usable file.")
 
-femilly, index = pick(list(DEVICES), "Vyber rodinu:")
-device, index = pick(list(DEVICES[femilly]), "Vyber čip:")
+femilly, index = pick(list(DEVICES), "Select the family:")
+device, index = pick(list(DEVICES[femilly]), "Select the chip:")
 
 with open(sys.argv[1], "w") as f:
     f.write(device.lower())

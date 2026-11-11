@@ -10,7 +10,7 @@ from sys import argv, stderr
 ############################################################################
 
 if len(argv) < 2:
-    stderr.write("Err: chybí argujent -- soubor.ihex\n")
+    stderr.write("Err: missing argument -- file.ihex\n")
     exit(1)
 
 f = open(argv[1], "r")

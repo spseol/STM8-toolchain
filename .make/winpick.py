@@ -7,23 +7,23 @@ def pick(options, title, multiselect=False, **kwargs):
     if not multiselect:
         while True:
             try:
-                choice = input("\nZadejte číslo volby: ")
+                choice = input("\nEnter the number of your choice: ")
                 index = int(choice) - 1
                 if 0 <= index < len(options):
                     return options[index], index
-                print(f"Prosím zadejte číslo mezi 1 a {len(options)}")
+                print(f"Please enter a number between 1 and {len(options)}")
             except ValueError:
-                print("Prosím zadejte platné číslo")
+                print("Please enter a valid number")
     else:
-        print("Zadejte čísla oddělená mezerou (např. 1 3) nebo Enter pro prázdný výběr:")
+        print("Enter numbers separated by spaces (e.g. 1 3) or press Enter for an empty selection:")
         while True:
             try:
-                line = input("\nZadejte čísla volby: ").strip()
+                line = input("\nEnter the numbers of your choice: ").strip()
                 if not line:
                     return []
                 indices = [int(c) - 1 for c in line.replace(',', ' ').split()]
                 if all(0 <= i < len(options) for i in indices):
                     return [(options[i], i) for i in indices]
-                print(f"Prosím zadejte čísla mezi 1 a {len(options)}")
+                print(f"Please enter numbers between 1 and {len(options)}")
             except ValueError:
-                print("Prosím zadejte platná čísla")
+                print("Please enter valid numbers")

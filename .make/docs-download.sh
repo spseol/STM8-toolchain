@@ -60,20 +60,20 @@ done
 [ ${#missing[@]} -eq 0 ] && exit 0
 
 echo
-echo "${Y}${B}Dokumentaci je potřeba stáhnout ručně.${N}"
-echo "ST stahování skriptem blokuje (ochrana proti robotům),"
-echo "proto se nic nestahuje samo. Ve složce ${B}docs/${N} jsou prázdné"
-echo "zástupné soubory. Postup:"
+echo "${Y}${B}The documentation must be downloaded manually.${N}"
+echo "ST blocks downloads by script (bot protection),"
+echo "so nothing is downloaded automatically. The ${B}docs/${N} folder contains empty"
+echo "placeholder files. Steps:"
 echo
-echo "  1. Otevři odkaz v prohlížeči (v terminálu Ctrl+klik na URL)."
-echo "  2. Pokud ST ukáže dotaz na souhlas nebo ověření, potvrď ho."
-echo "  3. Ulož PDF přes zástupný soubor ${B}$PWD/docs/…${N} a potvrď přepsání."
-echo "  4. Spusť ${B}make docs-download${N} znovu, ověří, že soubory jsou stažené."
+echo "  1. Open the link in a browser (in the terminal Ctrl+click the URL)."
+echo "  2. If ST shows a consent or verification prompt, confirm it."
+echo "  3. Save the PDF over the placeholder file ${B}$PWD/docs/…${N} and confirm the overwrite."
+echo "  4. Run ${B}make docs-download${N} again, it checks that the files are downloaded."
 echo
 n=0
 for d in "${missing[@]}"; do
     n=$((n + 1))
-    echo "${B}Soubor $n z ${#missing[@]}:${N} ${C}docs/${d%%|*}${N}"
+    echo "${B}File $n of ${#missing[@]}:${N} ${C}docs/${d%%|*}${N}"
     echo "  ${d#*|}"
     echo
 done

@@ -3,7 +3,7 @@
 # takže nevadí auto-load safe-path (lokální .gdbinit by gdb odmítl).
 
 # Bez LANG (locale C: env -i, některé programy spuštěné z GUI na macOS) by gdb
-# kódoval české texty ze skriptů níže do ASCII a stm8gdb.py by spadl na
+# kódoval texty ze skriptů níže (…, –, ─, →) do ASCII a stm8gdb.py by spadl na
 # UnicodeEncodeError. Musí být před `source`.
 set host-charset UTF-8
 
@@ -23,14 +23,14 @@ define regs
   info registers
 end
 document regs
-Vypíše registry procesoru.
+Print the CPU registers.
 end
 
 define bm
   break main
 end
 document bm
-Nastaví breakpoint na main().
+Set a breakpoint at main().
 end
 
 # příkazy flash, reset, run/start, vars; připojení přes OpenOCD; hlídání ELF

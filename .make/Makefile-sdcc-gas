@@ -292,7 +292,7 @@ define spl_fetch
 		git clone --depth 1 --quiet $(SPL_GIT) ../.spl-clone && \
 		for d in SPL SPLSPL; do [ -d ../$$d ] || mv ../.spl-clone/$$d ..; done && \
 		rm -rf ../.spl-clone && \
-		printf "***********************************************************\n*  SPL byla stažena. Možná je třeba znovu spustit make    *\n***********************************************************\n"; \
+		printf "***********************************************************\n*  SPL was downloaded. You may need to run make again.    *\n***********************************************************\n"; \
 	fi
 endef
 ../SPL:

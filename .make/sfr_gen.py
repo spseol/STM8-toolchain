@@ -111,7 +111,7 @@ def generate(cc, cflags, objcopy, out_elf):
         periphs = [(name, typ, base) for name, typ, base in PERIPH_RE.findall(macros)
                    if typ in typedefs]
         if not periphs:
-            raise RuntimeError("v stm8s.h nejsou žádné periferie")
+            raise RuntimeError("no peripherals found in stm8s.h")
 
         # jen jména s podtržítkem (TIM4_CR1_CEN), ne obecná (AREA)
         numbers = {name: int(value or plain, 0)
@@ -134,7 +134,7 @@ def generate(cc, cflags, objcopy, out_elf):
         # bez main a bez knihoven: v ELF jsou jen ladicí informace
         run([cc, "-mstm8", "--debug", "--out-fmt-elf", "--nostdlib", rel_arg, "-o", elf_arg])
         if not os.path.isfile(elf):
-            raise RuntimeError("SDCC nevytvořil sfr.elf")
+            raise RuntimeError("SDCC did not create sfr.elf")
         # symboly ELF jsou na adresách SFR typu FUNC, gdb stačí DWARF
         if objcopy and shutil.which(objcopy):
             run([objcopy, "-R", ".symtab", "-R", ".strtab", elf])
@@ -161,20 +161,20 @@ def main():
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(
-        description="Připraví registry periferií (sfr.elf, sfr.json) pro gdb.")
+        description="Prepare peripheral registers (sfr.elf, sfr.json) for gdb.")
     parser.add_argument("--cc", default="sdcc")
     parser.add_argument("--cflags", default="-mstm8",
-                        help="např. \"-mstm8 -DSTM8S208 -I inc -I ../SPLSPL/inc\"")
+                        help="e.g. \"-mstm8 -DSTM8S208 -I inc -I ../SPLSPL/inc\"")
     parser.add_argument("--objcopy", default="stm8-objcopy")
-    parser.add_argument("-o", "--output", required=True, help="výstupní sfr.elf")
+    parser.add_argument("-o", "--output", required=True, help="output sfr.elf")
     args = parser.parse_args()
     try:
         count = generate(native_command(args.cc), shlex.split(args.cflags),
                          args.objcopy, args.output)
     except (OSError, RuntimeError) as e:
-        warn(f"registry periferií pro gdb se nepodařilo připravit:\n{e}")
+        warn(f"could not prepare peripheral registers for gdb:\n{e}")
         return 0
-    print(f"sfr_gen: {count} periferií → {args.output}")
+    print(f"sfr_gen: {count} peripherals → {args.output}")
     return 0
 
 

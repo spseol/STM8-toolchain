@@ -22,7 +22,7 @@ if any_dir_not_exists ${SPLS[@]} ; then
     git clone --depth 1 --quiet https://gitlab.com/spseol/mit-no/spl.git spl-main
     for dir in ${SPLS[@]}; do
         if ! [ -d ../$dir ]; then
-            echo "Nahrávám $dir"
+            echo "Installing $dir"
             mv spl-main/$dir ..
         fi
     done
@@ -30,5 +30,5 @@ if any_dir_not_exists ${SPLS[@]} ; then
     rm -rf spl-main
 
 else
-    echo "... ${SPLS[@]} již existují."
+    echo "... ${SPLS[@]} already exist."
 fi

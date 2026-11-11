@@ -97,7 +97,7 @@ def load_sfr():
         gdb_path = path.replace("\\", "/") if os.name == "nt" else path
         gdb.execute(f'add-symbol-file "{gdb_path}"', to_string=True)
     except (OSError, ValueError, gdb.error):
-        warn("Registry periferií nejsou k dispozici (chybí sfr.elf). Spusť ladění přes make debug.")
+        warn("Peripheral registers are not available (sfr.elf is missing). Start debugging with make debug.")
         return
 
     macros, comments = info["macros"], info["comments"]
@@ -258,7 +258,7 @@ def find(token):
     name, _, regname = re.sub(r"->", ".", token.upper()).partition(".")
     periph = sfr["periphs"].get(name)
     if periph is None:
-        raise gdb.GdbError(f"Periferie {name} neexistuje. Seznam: sfr")
+        raise gdb.GdbError(f"Peripheral {name} does not exist. List: sfr")
     if not regname:
         return periph, None
     for reg in periph.regs:
@@ -266,17 +266,17 @@ def find(token):
             return periph, reg
     for field, _ in periph.other:
         if field.upper() == regname:
-            raise gdb.GdbError(f"{name}.{field} není jeden registr, použij: p/x {name}.{field}")
-    raise gdb.GdbError(f"{name} nemá registr {regname}: " + " ".join(r.name for r in periph.regs))
+            raise gdb.GdbError(f"{name}.{field} is not a single register, use: p/x {name}.{field}")
+    raise gdb.GdbError(f"{name} has no register {regname}: " + " ".join(r.name for r in periph.regs))
 
 
 def show_list():
     periphs = sorted(sfr["periphs"].values(), key=lambda p: p.base)
-    say("Periferie čipu:", "1;36")
+    say("Chip peripherals:", "1;36")
     cells = [f"{paint(f'{p.name:<6}', NAME_COLOR)} 0x{p.base:04x}" for p in periphs]
     for i in range(0, len(cells), 5):
         gdb.write("  " + "   ".join(cells[i:i + 5]) + "\n")
-    gdb.write("sfr TIM4 = registry, sfr TIM4.CR1 = bity, help sfr = víc\n")
+    gdb.write("sfr TIM4 = registers, sfr TIM4.CR1 = bits, help sfr = more\n")
 
 
 def show_periph(periph):
@@ -286,7 +286,7 @@ def show_periph(periph):
     for reg in periph.regs:
         line = f"  {paint(f'{reg.name:<6}', NAME_COLOR)} 0x{reg.addr:04x}  "
         if reg.addr not in values:
-            line += paint(f"nečteno, čtení maže příznaky; přečti: sfr {periph.name}.{reg.name}", "2")
+            line += paint(f"not read, reading clears flags; read it with: sfr {periph.name}.{reg.name}", "2")
             high = None
         else:
             value = values[reg.addr]
@@ -321,22 +321,22 @@ def show_reg(periph, reg):
         text = paint(f"{name:<8} {cur}", CHANGE_COLOR if changed else "")
         gdb.write(f"  {pos:<5} {text}  {comment}\n")
     if reg.side_effect:
-        say(f"  Čtení {periph.name}->{reg.name} smazalo příznaky (viz datasheet).", "2")
+        say(f"  Reading {periph.name}->{reg.name} cleared flags (see the datasheet).", "2")
 
 
 class SfrCommand(gdb.Command):
-    """Registry periferií (SFR) se jmény ze stm8s.h.
-Použití: sfr                  seznam periferií
-         sfr TIM4 [GPIOB …]   registry periferie a nastavené bity
-         sfr TIM4.CR1         jeden registr bit po bitu s popisem
-Změny od minulého zastavení jsou žlutě, vynulovaný bit jako -UIF.
-Tabulátor doplňuje periferie i registry (sfr TIM4.<Tab>).
+    """Peripheral registers (SFR) with the names from stm8s.h.
+Usage: sfr                  list of peripherals
+       sfr TIM4 [GPIOB …]   registers of a peripheral and the bits set
+       sfr TIM4.CR1         one register bit by bit, with descriptions
+Changes since the last stop are yellow, a cleared bit is shown as -UIF.
+Tab completes peripherals and registers (sfr TIM4.<Tab>).
 
-Registry jdou psát i jako v C, s maskami ze stm8s.h:
-  p TIM4->CR1           display GPIOB->ODR      p GPIOB (celá periferie)
+Registers can be written as in C, with the masks from stm8s.h:
+  p TIM4->CR1           display GPIOB->ODR      p GPIOB (whole peripheral)
   set var GPIOD->ODR |= 0x10      p/t SPI->CR2 & SPI_CR2_SSM
-display/x a p/x rozpis bitů a zvýraznění vynechají, display GPIOB->ODR ne.
-Pozor: p UART1 i display UART1 přečtou UART1->DR, a tím smažou RXNE."""
+display/x and p/x omit the bit breakdown and highlighting, display GPIOB->ODR does not.
+Beware: p UART1 and display UART1 both read UART1->DR, which clears RXNE."""
 
     def __init__(self):
         super().__init__("sfr", gdb.COMMAND_DATA)
@@ -344,14 +344,14 @@ Pozor: p UART1 i display UART1 přečtou UART1->DR, a tím smažou RXNE."""
     def invoke(self, arg, from_tty):
         self.dont_repeat()
         if not sfr["periphs"]:
-            raise gdb.GdbError("Registry periferií nejsou načtené. Spusť ladění přes make debug.")
+            raise gdb.GdbError("Peripheral registers are not loaded. Start debugging with make debug.")
         tokens = arg.split()
         if not tokens:
             show_list()
             return
         targets = [find(token) for token in tokens]
         if target_running():
-            raise gdb.GdbError("Program běží, zastav ho (Ctrl-C).")
+            raise gdb.GdbError("Program is running, stop it (Ctrl-C).")
         try:
             for periph, reg in targets:
                 if reg is None:
@@ -359,7 +359,7 @@ Pozor: p UART1 i display UART1 přečtou UART1->DR, a tím smažou RXNE."""
                 else:
                     show_reg(periph, reg)
         except gdb.MemoryError as e:
-            raise gdb.GdbError(f"Z čipu nejde číst: {e}")
+            raise gdb.GdbError(f"Cannot read from the chip: {e}")
 
     def complete(self, text, word):
         token = "" if not text or text[-1].isspace() else text.split()[-1]

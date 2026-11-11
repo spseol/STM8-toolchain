@@ -15,7 +15,7 @@ bases = sorted(set(os.path.splitext(os.path.basename(f))[0] for f in files))
 if not bases:
     sys.exit(0)
 
-selected = pick(bases, "Vyber knihovny (Space = výběr, Enter = potvrdit):", multiselect=True)
+selected = pick(bases, "Select libraries (Space = select, Enter = confirm):", multiselect=True)
 
 with open(sys.argv[1], 'w', newline='\n') as f:
     for item, _ in selected:
