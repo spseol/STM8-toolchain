@@ -11,7 +11,7 @@ Podporuje Linux, Windows i macOS.
 
 * *build* pomocí svobodného překladače [SDCC](http://sdcc.sourceforge.net/)
 * *flash* přes [OpenOCD](https://openocd.org/) nebo [stm8flash](https://github.com/vdudouyt/stm8flash)
-* *debug* pomocí [STM8 GDB](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) (`stm8-gdb`) a `cgdb`, nebo ve VS Code / VSCodium
+* *debug* pomocí [STM8 GDB](https://github.com/spseol/STM8-binutils-GDB) (`stm8-gdb`) a `cgdb`, nebo ve VS Code / VSCodium
 *  integraci SPL a podporu VS Code / clangd přes `compile_commands.json`.
 
 ## Jak to funguje?
@@ -31,6 +31,37 @@ Podporuje Linux, Windows i macOS.
   * <https://github.com/matejkrenek/stm8-toolchain>
 
 
+
+## Instalace
+
+Jeden příkaz pro každý systém nainstaluje překladač, OpenOCD, `stm8-gdb`, rozšíření pro VS Code / VSCodium
+a další nástroje (podrobnosti v [README rozšíření](.make/vscode/README.md#installation)). Spouští se jednou na počítač.
+
+**Linux** (Debian, Ubuntu, Mint a další distribuce odvozené od Debianu, amd64):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/linux.sh | bash
+```
+
+**macOS** (Apple Silicon), když nemáš Homebrew, nainstaluje ho:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/macos.sh | bash
+```
+
+**Windows 10/11**, v *PowerShellu* (jednou požádá o práva správce):
+
+```powershell
+irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows.ps1 | iex          # Chocolatey
+irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows-winget.ps1 | iex   # nebo winget
+```
+
+Nástroje se instalují správcem balíčků daného systému (`apt`, Homebrew, Chocolatey nebo winget). Nástroj,
+který už máš nainstalovaný jinak, se pravděpodobně nainstaluje podruhé. Chceš-li mít větší kontrolu,
+nainstaluj si každý nástroj ručně, viz [Závislosti](#závislosti).
+
+Podrobnosti o instalaci, ruční instalaci, jiné systémy a sestavení nástrojů ze zdrojáků jsou popsané na
+<https://chytrosti.marrek.cz/stm8install.html>.
 
 ## Použití
 
@@ -88,10 +119,10 @@ endif
 
 ## Ladění
 
-K ladění je potřeba `stm8-gdb`: [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb), fork GNU binutils-gdb
+K ladění je potřeba `stm8-gdb`: [STM8 binutils-gdb](https://github.com/spseol/STM8-binutils-GDB), fork GNU binutils-gdb
 s podporou STM8, verze 15 nebo novější, s podporou Pythonu a Debug Adapter Protocol (DAP; ten potřebuje VS Code).
 Není součástí tohoto toolchainu, nainstaluj ho nejdřív. Repozitář má balíček pro Debian (APT) a postup sestavení
-pro Linux i macOS (Apple Silicon). Pro macOS (Apple Silicon) je v jeho [vydáních](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb/-/releases)
+pro Linux i macOS (Apple Silicon). Pro macOS (Apple Silicon) je v jeho [vydáních](https://github.com/spseol/STM8-binutils-GDB/releases)
 hotový balíček s přibaleným Pythonem (`v15.0.50-stm8.2` nebo novější; starší `v15.0.50-stm8.1` Python nemá).
 
 `make debug` udělá všechno najednou: přeloží projekt s debug informacemi,
@@ -168,7 +199,7 @@ Jednotlivé bity takových registrů nejdou měnit (zápis by registr nejdřív 
 (kliknutím ho přepneš). Podrobnosti a řešení potíží:
 [`.make/vscode/README.md`](.make/vscode/README.md).
 
-Potřebuje [`stm8-gdb`](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) 15 nebo novější (není součástí rozšíření, nainstaluj ho nejdřív) a `openocd` v `PATH`,
+Potřebuje [`stm8-gdb`](https://github.com/spseol/STM8-binutils-GDB) 15 nebo novější (není součástí rozšíření, nainstaluj ho nejdřív) a `openocd` v `PATH`,
 stejně jako `make debug`. Rozšíření je testované na Linuxu. Na macOS (Apple Silicon) je ověřené s Nucleo-STM8S208RB:
 `make`, `make flash`, `make cgdb` a ladění v rozšíření (`stm8-gdb` z hotového balíčku, OpenOCD a SDCC z Homebrew).
 `stm8-gdb` a `openocd` musí být v `PATH` programu, který editor spouští: VS Code / VSCodium spouštěj z terminálu
@@ -199,7 +230,7 @@ a commitni sám. Vlastní změny v `.make/`, `Makefile` a `.vscode/launch.json` 
   dá nainstalovat společně s [Git](https://git-scm.com/download/win)em.
 * [SDCC](http://sdcc.sourceforge.net/)
   nebo [SDCC-gas](https://github.com/XaviDCR92/sdcc-gas)
-* [STM8 binutils-gdb](https://gitlab.com/spseol/mit-no/stm8-binutils-gdb) -- fork GNU binutils-gdb s podporou STM8
+* [STM8 binutils-gdb](https://github.com/spseol/STM8-binutils-GDB) -- fork GNU binutils-gdb s podporou STM8
   (`stm8-gdb`, `stm8-ld`); pro ladění `stm8-gdb` 15 nebo novější s Pythonem a DAP
 * [OpenOCD](https://openocd.org/) pro `flash` a `debug`
 * [cgdb](https://cgdb.github.io/) pro `make debug` (bez něj se použije gdb TUI)
@@ -207,15 +238,7 @@ a commitni sám. Vlastní změny v `.make/`, `Makefile` a `.vscode/launch.json` 
   je-li nainstalované, použije ho `make flash`, jinak OpenOCD.
 * ([stm8flash](https://github.com/vdudouyt/stm8flash) pro `flash2`)
 
-### Na Windows
-
-Všechno potřebné nainstaluje jeden příkaz v PowerShellu (podrobnosti v
-[README rozšíření pro VS Code](.make/vscode/README.md#installation)):
-
-```powershell
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows.ps1 | iex          # Chocolatey
-irm https://gitlab.com/spseol/mit-no/STM8S-toolchain/-/raw/main/.make/install/windows-winget.ps1 | iex   # nebo winget
-```
+Všechno tohle nainstaluje [instalace](#instalace) jedním příkazem.
 
 ## Tři Mejkfaily ....
 

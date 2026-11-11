@@ -30,6 +30,38 @@ Supports Linux, Windows, and macOS.
   * <https://github.com/matejkrenek/stm8-toolchain>
 
 
+## Installation
+
+One command per system installs the compiler, OpenOCD, `stm8-gdb`, the VS Code / VSCodium extension and the
+other tools (details in the [extension README](.make/vscode/README.md#installation)). Run it once per computer.
+
+**Linux** (Debian, Ubuntu, Mint and other Debian-based distributions, amd64):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/linux.sh | bash
+```
+
+**macOS** (Apple Silicon), installs Homebrew first if you do not have it:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/macos.sh | bash
+```
+
+**Windows 10/11**, in *PowerShell* (asks for administrator rights once):
+
+```powershell
+irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows.ps1 | iex          # Chocolatey
+irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows-winget.ps1 | iex   # or winget
+```
+
+The tools are installed with the package manager of the system (`apt`, Homebrew, Chocolatey or winget).
+A tool you already have installed in another way is probably installed a second time. For more control
+install each tool by hand, see [Dependencies](#dependencies).
+
+Details of the installation, a manual installation, other systems and building the tools from sources
+are described at <https://chytrosti.marrek.cz/stm8install-en.html> (the original is in Czech:
+<https://chytrosti.marrek.cz/stm8install.html>).
+
 ## Usage
 
 First, you need to configure the microprocessor and its frequency in the `Makefile`;
@@ -211,18 +243,7 @@ for you to resolve). It never touches `src/`, `inc/` or your README and commits 
   `make flash` uses it when it is installed, otherwise OpenOCD.
 * ([stm8flash](https://github.com/vdudouyt/stm8flash) for `flash2`)
 
-### On Windows
-
-One command in PowerShell installs everything needed (details in the
-[extension README](.make/vscode/README.md#installation)):
-
-```powershell
-irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows.ps1 | iex          # Chocolatey
-irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows-winget.ps1 | iex   # or winget
-```
-
-The tools are installed with Chocolatey or winget. A tool you already have installed in another way is
-probably installed a second time. For more control install each tool by hand.
+All of this is installed by the one-command [installation](#installation).
 
 ## Three Makefiles
 
@@ -230,7 +251,7 @@ There are three `Makefile` variants available in the `.make` directory. This is 
 `SDCC` compiler cannot remove dead code. There are three solutions. The first one is
 the most optimal, the other two are kept just in case. **By default the Makefile is set
 to the first and most optimal solution `sdcc`.**
-For more details, see <https://chytrosti.marrek.cz/stm8oss.html>.
+For more details, see <https://chytrosti.marrek.cz/stm8oss-en.html>.
 
 ```
 $ ls .make/Makefile*

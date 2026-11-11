@@ -71,8 +71,8 @@ what is installed already is skipped. The ST-Link driver for Windows is not inst
 
 ### Manual installation and building from sources
 
-Other Linux distributions, a manual installation and building the tools from sources are described (in
-Czech) at <https://chytrosti.marrek.cz/stm8install.html>.
+Other Linux distributions, a manual installation and building the tools from sources are described at
+<https://chytrosti.marrek.cz/stm8install-en.html> (the original is in Czech: <https://chytrosti.marrek.cz/stm8install.html>).
 
 ## Requirements
 
@@ -184,7 +184,7 @@ session with a message instead of hanging. The peripheral registers come from th
 
 - Toolchain: <https://gitlab.com/spseol/mit-no/STM8S-toolchain>
   (public mirror on GitHub: <https://github.com/spseol/STM8S-toolchain>)
-- Documentation in Czech: <https://chytrosti.marrek.cz/stm8oss.html>
+- Documentation: <https://chytrosti.marrek.cz/stm8oss-en.html> (the original is in Czech: <https://chytrosti.marrek.cz/stm8oss.html>)
 - Issues: <https://github.com/spseol/STM8S-toolchain/issues>
 
 ## License
