@@ -265,17 +265,22 @@ function activate(context) {
   }));
 
   const version = context.extension.packageJSON.version;
-  const notice = project.versionNotice(version, rootOf());
-  if (notice) vscode.window.showInformationMessage(notice);
+  const root = rootOf();
+  const checkVersions = vscode.workspace.getConfiguration('stm8', root ? vscode.Uri.file(root) : undefined)
+    .get('checkToolchainUpdates', true) !== false;
+  if (checkVersions) {
+    const notice = project.versionNotice(version, root);
+    if (notice) vscode.window.showInformationMessage(notice);
 
-  if (project.upgradeOffer(version, rootOf()) && !context.workspaceState.get(DISMISSED)) {
-    guarded(async () => {
-      const choice = await vscode.window.showInformationMessage(
-        'This project has an older STM8 toolchain than the extension. Update it?', UPDATE, 'Not now', "Don't ask again",
-      );
-      if (choice === UPDATE) await vscode.commands.executeCommand('stm8.updateToolchain');
-      else if (choice === "Don't ask again") await context.workspaceState.update(DISMISSED, true);
-    });
+    if (project.upgradeOffer(version, root) && !context.workspaceState.get(DISMISSED)) {
+      guarded(async () => {
+        const choice = await vscode.window.showInformationMessage(
+          'This project has an older STM8 toolchain than the extension. Update it?', UPDATE, 'Not now', "Don't ask again",
+        );
+        if (choice === UPDATE) await vscode.commands.executeCommand('stm8.updateToolchain');
+        else if (choice === "Don't ask again") await context.workspaceState.update(DISMISSED, true);
+      });
+    }
   }
 
   guarded(() => offerCcls(vscode, context));

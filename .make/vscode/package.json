@@ -114,6 +114,12 @@
           "scope": "machine",
           "description": "Git repository that STM8: Update Toolchain downloads the current toolchain (.make/) from."
         },
+        "stm8.checkToolchainUpdates": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "When a project is opened, compare the project's toolchain (.make/) with the installed extension: offer STM8: Update Toolchain when the project is older, tell you to update the extension when it is newer. STM8: Update Toolchain and make upgrade work either way."
+        },
         "stm8.afterSuccess": {
           "type": "string",
           "enum": [

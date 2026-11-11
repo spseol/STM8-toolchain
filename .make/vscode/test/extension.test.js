@@ -88,7 +88,10 @@ function load() {
       getConfiguration: (section) => ({
         get: (key) => {
           if (section !== 'stm8') return undefined;
-          return { toolchainUrl: 'https://example.org/t.git', projectsFolder: seen.projectsFolder }[key];
+          return {
+            toolchainUrl: 'https://example.org/t.git', projectsFolder: seen.projectsFolder,
+            checkToolchainUpdates: seen.checkToolchainUpdates, // undefined = not set, the extension defaults to true
+          }[key];
         },
         update: async (key, value, target) => { seen.updates.push([section, key, value, target]); if (key === 'projectsFolder') seen.projectsFolder = value; },
       }),
@@ -646,6 +649,35 @@ test('no_offer_after_dont_ask_again', async () => {
   const { seen } = offering({ stored: { 'stm8.upgrade.dismissed': true } });
   await flush();
   assert.ok(!messagesOf(seen, 'info').some(([, t]) => t === OFFER));
+});
+
+test('no_offer_when_check_is_disabled', async () => {
+  const loaded = load();
+  loaded.project.versionNotice = () => null;
+  loaded.project.upgradeOffer = () => true;
+  loaded.seen.checkToolchainUpdates = false;
+  loaded.extension.activate(context());
+  await flush();
+  assert.ok(!messagesOf(loaded.seen, 'info').some(([, t]) => t === OFFER));
+});
+
+test('no_version_notice_when_check_is_disabled', async () => {
+  const loaded = load();
+  loaded.project.versionNotice = () => 'newer extension in the project';
+  loaded.project.upgradeOffer = () => false;
+  loaded.seen.checkToolchainUpdates = false;
+  loaded.extension.activate(context());
+  await flush();
+  assert.ok(!messagesOf(loaded.seen, 'info').some(([, t]) => t === 'newer extension in the project'));
+});
+
+test('version_notice_is_shown_when_check_is_enabled', async () => {
+  const loaded = load();
+  loaded.project.versionNotice = () => 'newer extension in the project';
+  loaded.project.upgradeOffer = () => false;
+  loaded.extension.activate(context());
+  await flush();
+  assert.ok(messagesOf(loaded.seen, 'info').some(([, t]) => t === 'newer extension in the project'));
 });
 
 test('offer_update_toolchain_runs_the_command', async () => {
