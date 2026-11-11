@@ -221,6 +221,9 @@ irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/w
 irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows-winget.ps1 | iex   # or winget
 ```
 
+The tools are installed with Chocolatey or winget. A tool you already have installed in another way is
+probably installed a second time. For more control install each tool by hand.
+
 ## Three Makefiles
 
 There are three `Makefile` variants available in the `.make` directory. This is because the

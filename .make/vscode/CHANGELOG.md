@@ -13,6 +13,8 @@ All notable changes to this extension are documented here.
 - `make spl` downloads the SPL libraries with `git clone` (anonymous Git over HTTPS is not limited) instead
   of a `curl` of an archive. Use *Update Toolchain* to get the new `Makefile` in an existing project.
 - README: new commands and links for the installation.
+- The installation scripts and the README warn that a tool installed in another way is probably installed a second
+  time by the package manager (`apt`, Homebrew, Chocolatey, winget). For more control install each tool by hand.
 
 ## 1.0.0 10-11-2026
 

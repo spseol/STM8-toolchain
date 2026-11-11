@@ -6,6 +6,8 @@
 #
 # Installs: make, git, python3, SDCC, OpenOCD, stm8-gdb (STM8 binutils-gdb), stm8flash,
 # cgdb, ccls and the VS Code / VSCodium extension (when `code` or `codium` is found).
+# The tools come from apt, so a tool you have installed in another way (from sources, pip) is probably
+# installed again next to it. For more control, install each tool by hand.
 # Run it as a normal user, not as root: it calls `sudo` only where it needs to.
 # Safe to run again: what is installed already is skipped by apt.
 #

@@ -54,6 +54,13 @@ With winget (in Windows 10/11 already):
 irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows-winget.ps1 | iex
 ```
 
+The scripts install the tools with the package manager of the system: `apt` on Linux, Homebrew on macOS,
+Chocolatey or winget on Windows. A package manager knows only what it installed itself. If you already have
+a tool (for example Git or Python) installed in another way, for example by an installer from a web page,
+the script probably installs it a second time next to the first one. If you want more control, do not run
+the script and install each tool by hand, see [Requirements](#requirements) and
+[Manual installation](#manual-installation-and-building-from-sources).
+
 Then open VS Code or VSCodium and run **`STM8: New Project…`**. On macOS start the editor from a
 terminal (`code .`), see [Requirements](#requirements).
 

@@ -6,6 +6,8 @@
 # Installs (when missing): Command Line Tools, Homebrew, make, git, SDCC, OpenOCD, cgdb,
 # ccls, stm8-gdb (STM8 binutils-gdb, prebuilt package with its own Python), VSCodium
 # (only when neither VS Code nor VSCodium is found) and the editor extension.
+# The tools come from Homebrew, which knows only what it installed itself: a tool you have installed in another
+# way is probably installed again next to it. For more control, install each tool by hand.
 # Run it as a normal user, not as root: it calls `sudo` only where it needs to.
 # Safe to run again: what is installed already is skipped.
 # Works with the old bash 3.2 that macOS ships: no bash 4 features here (arrays with
@@ -58,7 +60,7 @@ if ! grep -qsF "${SHELLENV_LINE}" "${HOME}/.zprofile"; then
 fi
 
 # --- Tools from Homebrew ---
-say "Installing the tools with Homebrew"
+say "Installing the tools with Homebrew (a tool installed in another way may be installed again)"
 brew install make git coreutils sdcc open-ocd cgdb ccls
 
 # --- stm8-gdb ---

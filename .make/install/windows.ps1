@@ -9,6 +9,9 @@
 #   * stm8-gdb (STM8 binutils-gdb installer from GitHub, adds itself to PATH),
 #   * ccls (optional, installer from GitHub),
 #   * the VS Code / VSCodium extension.
+# The tools are installed with the package manager (Chocolatey or winget), which knows only what it installed
+# itself: a tool you have installed in another way (an installer from a web page) is probably installed again.
+# For more control, install each tool by hand and skip this script.
 # Not installed: the ST-Link driver and STVP (ST publishes them after registration; flashing
 # works through OpenOCD without STVP).
 #
@@ -84,7 +87,7 @@ try {
                  (Test-Path "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd") -or
                  (Test-Path "$env:LOCALAPPDATA\Programs\VSCodium\bin\codium.cmd")
 
-    Say "Installing git, make, python, openocd ($STM8_PM)"
+    Say "Installing git, make, python, openocd with $STM8_PM (a tool installed in another way may be installed again)"
     if ($STM8_PM -eq 'choco') {
         choco install -y git make python openocd
         if (-not $hasEditor) { Say 'Installing VSCodium'; choco install -y vscodium }
