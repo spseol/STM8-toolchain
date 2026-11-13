@@ -15,6 +15,8 @@ The toolchain works without the extension: build, flash and `make debug` (cgdb) 
 or terminal. The extension is a layer on top of it. It adds `F5` debugging through the Debug Adapter
 Protocol, the peripherals view, the status bar buttons, and project creation and update.
 
+![STM8 Toolchain Debugger: the STM8 Peripherals view in VS Code](https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/vscode/media/screen.png)
+
 - **Build and flash** the project with a click in the status bar: it runs `make` / `make flash` as a
   task in the terminal panel. When `make` ends successfully, the extension switches back (closes the
   panel and focuses the editor); see the setting `stm8.afterSuccess`. After an error the terminal stays
@@ -90,6 +92,10 @@ what is installed already is skipped.
 
 Open VS Code or VSCodium and run **`STM8: New Project…`**. On macOS start the editor from a
 terminal (`code .`), see [Requirements](#requirements).
+
+Press **Ctrl+Shift+P** and type `STM8` to see all the commands of the extension:
+
+![The STM8 commands in the Command Palette](https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/vscode/media/commands.png)
 
 ### Manual installation and building from sources
 
