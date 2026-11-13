@@ -2,6 +2,14 @@
 
 All notable changes to this extension are documented here.
 
+## 1.0.3 13-11-2026
+
+### Changed
+
+- README: the installation section is split into headings per system (Linux, macOS, Windows with
+  Chocolatey and winget), the scripts description and the next step. GitHub links point to
+  `spseol/STM8-toolchain`.
+
 ## 1.0.2 11-11-2026
 
 ### Added

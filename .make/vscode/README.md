@@ -2,14 +2,18 @@
 
 Build, flash and debug [STM8S](https://www.st.com/en/microcontrollers-microprocessors/stm8s-series.html)
 microcontroller projects from VS Code or VSCodium. The extension drives the open-source
-[STM8S toolchain](https://github.com/spseol/STM8S-toolchain) (a `Makefile` around the
+[STM8S toolchain](https://github.com/spseol/STM8-toolchain) (a `Makefile` around the
 [SDCC](http://sdcc.sourceforge.net/) compiler, [OpenOCD](https://openocd.org/) and `stm8-gdb`),
-which is used to teach microcontroller programming.
+which is used to teach microcontroller programming. It runs on Linux, macOS (Apple Silicon) and Windows 10/11 (x64).
 
 Everything the extension needs (compiler, OpenOCD, `stm8-gdb`) is installed by one command, see
 [Installation](#installation).
 
 ## What it does
+
+The toolchain works without the extension: build, flash and `make debug` (cgdb) run from any editor
+or terminal. The extension is a layer on top of it. It adds `F5` debugging through the Debug Adapter
+Protocol, the peripherals view, the status bar buttons, and project creation and update.
 
 - **Build and flash** the project with a click in the status bar: it runs `make` / `make flash` as a
   task in the terminal panel. When `make` ends successfully, the extension switches back (closes the
@@ -27,32 +31,50 @@ Everything the extension needs (compiler, OpenOCD, `stm8-gdb`) is installed by o
 The extension needs a few tools (compiler, OpenOCD, a special `stm8-gdb`). One command per system
 installs them all and then the extension itself. Run it in a terminal, once per computer.
 
-**Linux** (Debian, Ubuntu, Mint and other Debian-based distributions, amd64):
+### Linux (one-line install)
+
+Debian, Ubuntu, Mint and other Debian-based distributions (amd64).
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/linux.sh | bash
 ```
 
-**macOS** (Apple Silicon): installs Homebrew first if you do not have it.
+### macOS (Apple Silicon, one-line install)
+
+Installs Homebrew first if you do not have it.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/macos.sh | bash
 ```
 
-**Windows 10/11**: open *PowerShell* and run one of the two (they do the same, choose the package manager
+### Windows 10/11 (one-line install)
+
+Open *PowerShell* and run one of the two commands below (they do the same, choose the package manager
 you prefer). The script asks for administrator rights once.
 
-With [Chocolatey](https://chocolatey.org) (installed when you do not have it):
+#### Option 1: Chocolatey
+
+Uses [Chocolatey](https://chocolatey.org). It is installed too when you do not have it:
 
 ```powershell
 irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows.ps1 | iex
 ```
 
-With winget (in Windows 10/11 already):
+#### Option 2: winget
+
+Uses winget, which is already in Windows 10/11:
 
 ```powershell
 irm https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/install/windows-winget.ps1 | iex
 ```
+
+#### The ST-Link driver
+
+The ST-Link driver for Windows is not installed by the script
+(ST publishes it after registration): if the board is not found, install
+[STSW-LINK009](https://www.st.com/en/development-tools/stsw-link009.html).
+
+### About the scripts
 
 The scripts install the tools with the package manager of the system: `apt` on Linux, Homebrew on macOS,
 Chocolatey or winget on Windows. A package manager knows only what it installed itself. If you already have
@@ -61,13 +83,13 @@ the script probably installs it a second time next to the first one. If you want
 the script and install each tool by hand, see [Requirements](#requirements) and
 [Manual installation](#manual-installation-and-building-from-sources).
 
-Then open VS Code or VSCodium and run **`STM8: New Project…`**. On macOS start the editor from a
-terminal (`code .`), see [Requirements](#requirements).
-
 The scripts are short and readable, [take a look](https://github.com/spseol/STM8-toolchain/tree/main/.make/install) before you run them. Run them again any time:
-what is installed already is skipped. The ST-Link driver for Windows is not installed by the script
-(ST publishes it after registration): if the board is not found, install
-[STSW-LINK009](https://www.st.com/en/development-tools/stsw-link009.html).
+what is installed already is skipped.
+
+### Next step
+
+Open VS Code or VSCodium and run **`STM8: New Project…`**. On macOS start the editor from a
+terminal (`code .`), see [Requirements](#requirements).
 
 ### Manual installation and building from sources
 
@@ -184,9 +206,9 @@ session with a message instead of hanging. The peripheral registers come from th
 ## Links
 
 - Toolchain: <https://gitlab.com/spseol/mit-no/STM8S-toolchain>
-  (public mirror on GitHub: <https://github.com/spseol/STM8S-toolchain>)
+  (public mirror on GitHub: <https://github.com/spseol/STM8-toolchain>)
 - Documentation: <https://chytrosti.marrek.cz/stm8oss-en.html> (the original is in Czech: <https://chytrosti.marrek.cz/stm8oss.html>)
-- Issues: <https://github.com/spseol/STM8S-toolchain/issues>
+- Issues: <https://github.com/spseol/STM8-toolchain/issues>
 
 ## License
 

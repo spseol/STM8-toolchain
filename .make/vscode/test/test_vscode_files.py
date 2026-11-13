@@ -99,9 +99,9 @@ def test_readme_images_are_https_and_not_svg():
 def test_package_json_marketplace_fields():
     package = json.loads((VSCODE / "package.json").read_text())
     assert (VSCODE / package["icon"]).is_file() and package["icon"].endswith(".png")
-    assert package["repository"] == {"type": "git", "url": "https://github.com/spseol/STM8S-toolchain.git"}
-    assert package["bugs"]["url"] == "https://github.com/spseol/STM8S-toolchain/issues"
-    assert package["homepage"].startswith("https://github.com/spseol/STM8S-toolchain")
+    assert package["repository"] == {"type": "git", "url": "https://github.com/spseol/STM8-toolchain.git"}
+    assert package["bugs"]["url"] == "https://github.com/spseol/STM8-toolchain/issues"
+    assert package["homepage"].startswith("https://github.com/spseol/STM8-toolchain")
     assert {"stm8", "sdcc"} <= set(package["keywords"])
     assert package["categories"] == ["Debuggers", "Education"]
     top = re.search(r"^## (\d+\.\d+\.\d+)\b", (VSCODE / "CHANGELOG.md").read_text(encoding="utf-8"), re.M).group(1)
