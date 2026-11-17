@@ -4,16 +4,12 @@ Build, flash and debug [STM8S](https://www.st.com/en/microcontrollers-microproce
 microcontroller projects from VS Code or VSCodium. The extension drives the open-source
 [STM8S toolchain](https://github.com/spseol/STM8-toolchain) (a `Makefile` around the
 [SDCC](http://sdcc.sourceforge.net/) compiler, [OpenOCD](https://openocd.org/) and `stm8-gdb`),
-which is used to teach microcontroller programming. It runs on Linux, macOS (Apple Silicon) and Windows 10/11 (x64).
+which is used to teach microcontroller programming.
 
 Everything the extension needs (compiler, OpenOCD, `stm8-gdb`) is installed by one command, see
-[Installation](#installation).
+[Requirements](#requirements) and [Installation](#installation).
 
 ## What it does
-
-The toolchain works without the extension: build, flash and `make debug` (cgdb) run from any editor
-or terminal. The extension is a layer on top of it. It adds `F5` debugging through the Debug Adapter
-Protocol, the peripherals view, the status bar buttons, and project creation and update.
 
 ![STM8 Toolchain Debugger: the STM8 Peripherals view in VS Code](https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/vscode/media/screen.png)
 
@@ -28,10 +24,33 @@ Protocol, the peripherals view, the status bar buttons, and project creation and
 - **New projects**: `STM8: New Project…` clones the toolchain into a new project folder and opens it.
 - **Toolchain updates**: `STM8: Update Toolchain` brings an existing project up to date.
 
+The toolchain works without the extension: build, flash and `make debug` (cgdb) run from any editor
+or terminal. The extension is a layer on top of it. It adds `F5` debugging through the Debug Adapter
+Protocol, the peripherals view, the status bar buttons, and project creation and update.
+
+## Requirements
+
+Linux, macOS (Apple Silicon) and Windows 10/11 (x64) are supported. The extension uses these tools:
+
+- `make`, `python3` (on Windows `python`) and `git` (on Windows Git for Windows, which brings `bash`)
+- [SDCC](http://sdcc.sourceforge.net/) (the compiler), **not version 4.5.0**: it is broken for STM8
+- `openocd`
+- `stm8-gdb` **15 or newer**, built with Python and Debug Adapter Protocol support. It is not part of
+  the extension.
+
+You also need an ST-Link (for example the one on a Nucleo-STM8S board, or a standalone ST-Link V2).
+No Node.js or npm is needed.
+
+The [installation scripts](#installation) below install all of the tools.
+
 ## Installation
 
-The extension needs a few tools (compiler, OpenOCD, a special `stm8-gdb`). One command per system
-installs them all and then the extension itself. Run it in a terminal, once per computer.
+One command per system installs the tools and then the extension itself (when it finds `code` or
+`codium`). Run it in a terminal, once per computer. If you installed the extension from the
+Marketplace already, run the script anyway: the extension does not work without the tools.
+
+The scripts are short and readable, [take a look](https://github.com/spseol/STM8-toolchain/tree/main/.make/install)
+before you run them, and see [About the scripts](#about-the-scripts).
 
 ### Linux (one-line install)
 
@@ -82,47 +101,31 @@ The scripts install the tools with the package manager of the system: `apt` on L
 Chocolatey or winget on Windows. A package manager knows only what it installed itself. If you already have
 a tool (for example Git or Python) installed in another way, for example by an installer from a web page,
 the script probably installs it a second time next to the first one. If you want more control, do not run
-the script and install each tool by hand, see [Requirements](#requirements) and
+the script and install each tool by hand, see
 [Manual installation](#manual-installation-and-building-from-sources).
 
-The scripts are short and readable, [take a look](https://github.com/spseol/STM8-toolchain/tree/main/.make/install) before you run them. Run them again any time:
-what is installed already is skipped.
-
-### Next step
-
-Open VS Code or VSCodium and run **`STM8: New Project…`**. On macOS start the editor from a
-terminal (`code .`), see [Requirements](#requirements).
-
-Press **Ctrl+Shift+P** and type `STM8` to see all the commands of the extension:
-
-![The STM8 commands in the Command Palette](https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/vscode/media/commands.png)
+Run the scripts again any time: what is installed already is skipped.
 
 ### Manual installation and building from sources
 
 Other Linux distributions, a manual installation and building the tools from sources are described at
 <https://chytrosti.marrek.cz/stm8install-en.html> (the original is in Czech: <https://chytrosti.marrek.cz/stm8install.html>).
 
-## Requirements
+`stm8-gdb` comes from the STM8 binutils-gdb build: <https://github.com/spseol/STM8-binutils-GDB>
+(a Debian package, an installer for macOS Apple Silicon and one for Windows; release `v15.0.50-stm8.2`
+or newer).
 
-Linux, macOS (Apple Silicon) and Windows 10/11 (x64) are supported. The [installation scripts](#installation)
-set all of this up; the list is for those who install the tools by hand:
-
-- `make`, `python3` (on Windows `python`) and `git` (on Windows Git for Windows, which brings `bash`)
-- [SDCC](http://sdcc.sourceforge.net/) (the compiler), **not version 4.5.0**: it is broken for STM8
-- `openocd`
-- `stm8-gdb` **15 or newer**, built with Python and Debug Adapter Protocol support. It is not part of
-  the extension. It comes from the STM8 binutils-gdb build: <https://github.com/spseol/STM8-binutils-GDB>
-  (a Debian package, an installer for macOS Apple Silicon and one for Windows; release `v15.0.50-stm8.2`
-  or newer)
-- an ST-Link (for example the one on a Nucleo-STM8S board, or a standalone ST-Link V2)
-
-`stm8-gdb` and `openocd` must be in the `PATH` of the program that starts the editor. On macOS start
-VS Code / VSCodium from a terminal (`code .`), not from the Dock. There is no `lsusb` on macOS, so the
-ST-Link check is skipped there and OpenOCD reports a missing board instead.
-
-No Node.js or npm is needed.
+`stm8-gdb` and `openocd` must be in the `PATH` of the program that starts the editor. There is no
+`lsusb` on macOS, so the ST-Link check is skipped there and OpenOCD reports a missing board instead.
 
 ## Getting started
+
+Press **Ctrl+Shift+P** and type `STM8` to see all the commands of the extension:
+
+![The STM8 commands in the Command Palette](https://raw.githubusercontent.com/spseol/STM8-toolchain/main/.make/vscode/media/commands.png)
+
+On macOS start VS Code / VSCodium from a terminal (`code .`), not from the Dock: a program started
+from the Dock does not see the `PATH` of your shell.
 
 1. Run **`STM8: New Project…`** from the Command Palette (or use the button in the empty Explorer).
    The toolchain is cloned into a new folder in your projects folder (the `stm8.projectsFolder`
@@ -152,15 +155,6 @@ Nothing is committed or staged, so you can review the result with `git diff`.
 
 The extension also offers the update when it opens a project with an older toolchain.
 
-## Settings
-
-| setting | default | meaning |
-|:--- |:--- |:- |
-| `stm8.toolchainUrl` | `https://github.com/spseol/STM8-toolchain.git` | Git repository that *New Project* clones the toolchain from and *Update Toolchain* downloads it from. It can only be set in your user settings; a project's `.vscode/settings.json` cannot change it, because the downloaded `upgrade.py` is run. |
-| `stm8.checkToolchainUpdates` | `true` | When a project is opened, the extension compares the version of the extension sources in the project (`.make/vscode/package.json`) with the installed extension. It offers *Update Toolchain* when the project is older and tells you to update the extension when the project is newer. No network is used. Set it to `false` (user settings or the project's `.vscode/settings.json`) to switch both messages off; *Update Toolchain* and `make upgrade` still work. |
-| `stm8.afterSuccess` | `hidePanel` | What *Build* and *Flash* in the status bar do when `make` ends with exit code 0: `hidePanel` (close the panel, focus the editor), `editor` (focus the editor, keep the panel), `previousTerminal` (show the terminal that was active before, otherwise the editor) or `stay` (keep the terminal in front). After an error the terminal always stays in front. VS Code cannot tell which tab of the panel (Problems, Output, …) was active, so it cannot return to that. |
-| `stm8.projectsFolder` | *(empty)* | Folder where *New Project* creates your projects. Keep all projects in one folder: they share the SPL library in `../SPLSPL`. Like `stm8.toolchainUrl`, it can only be set in your user settings. |
-
 ## Using it
 
 Open the project folder and press `F5` (configuration *STM8 debug*; without a `launch.json` the
@@ -188,6 +182,15 @@ The Debug Console accepts gdb commands, including `sfr`, `sfr TIM4.CR1`, `p TIM4
 `set var GPIOD->ODR |= 0x10`. The status bar has *Build* (`make` as a task), *Flash* (while debugging it restarts the
 session, otherwise `make flash` as a task), *Debug* and the target chip (click to switch, only while not debugging).
 
+## Settings
+
+| setting | default | meaning |
+|:--- |:--- |:- |
+| `stm8.toolchainUrl` | `https://github.com/spseol/STM8-toolchain.git` | Git repository that *New Project* clones the toolchain from and *Update Toolchain* downloads it from. It can only be set in your user settings; a project's `.vscode/settings.json` cannot change it, because the downloaded `upgrade.py` is run. |
+| `stm8.checkToolchainUpdates` | `true` | When a project is opened, the extension compares the version of the extension sources in the project (`.make/vscode/package.json`) with the installed extension. It offers *Update Toolchain* when the project is older and tells you to update the extension when the project is newer. No network is used. Set it to `false` (user settings or the project's `.vscode/settings.json`) to switch both messages off; *Update Toolchain* and `make upgrade` still work. |
+| `stm8.afterSuccess` | `hidePanel` | What *Build* and *Flash* in the status bar do when `make` ends with exit code 0: `hidePanel` (close the panel, focus the editor), `editor` (focus the editor, keep the panel), `previousTerminal` (show the terminal that was active before, otherwise the editor) or `stay` (keep the terminal in front). After an error the terminal always stays in front. VS Code cannot tell which tab of the panel (Problems, Output, …) was active, so it cannot return to that. |
+| `stm8.projectsFolder` | *(empty)* | Folder where *New Project* creates your projects. Keep all projects in one folder: they share the SPL library in `../SPLSPL`. Like `stm8.toolchainUrl`, it can only be set in your user settings. |
+
 ## When something goes wrong
 
 | message | what to do |
@@ -209,16 +212,6 @@ program with the `run` command, answers hovers over registers whose read clears 
 session with a message instead of hanging. The peripheral registers come from the same
 `.make/stm8sfr.py` that serves `cgdb`.
 
-## Links
-
-- Toolchain: <https://github.com/spseol/STM8-toolchain>
-- Documentation: <https://chytrosti.marrek.cz/stm8oss-en.html> (the original is in Czech: <https://chytrosti.marrek.cz/stm8oss.html>)
-- Issues: <https://github.com/spseol/STM8-toolchain/issues>
-
-## License
-
-GPL-3.0-or-later, see the `LICENSE.txt` of the package.
-
 ## Installing from a toolchain checkout (`make vscode`)
 
 Developers and users of the toolchain can install the extension without a marketplace:
@@ -233,3 +226,13 @@ afterwards. A project tells you when it carries a newer extension than the insta
 
 Tests: `pytest .make/vscode`, `node --test .make/vscode/test/*.test.js` (`STM8_HW=1` adds the tests
 that flash the connected board).
+
+## Links
+
+- Toolchain: <https://github.com/spseol/STM8-toolchain>
+- Documentation: <https://chytrosti.marrek.cz/stm8oss-en.html> (the original is in Czech: <https://chytrosti.marrek.cz/stm8oss.html>)
+- Issues: <https://github.com/spseol/STM8-toolchain/issues>
+
+## License
+
+GPL-3.0-or-later, see the `LICENSE.txt` of the package.
