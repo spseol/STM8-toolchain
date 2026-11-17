@@ -211,7 +211,7 @@ Starší projekt má starší `.make/`. Ve VS Code spusť **`STM8: Update Toolch
 když starší projekt pozná); bez editoru `make upgrade`, nebo, pokud ho tvůj projekt ještě nemá:
 
 ```bash
-git fetch https://gitlab.com/spseol/mit-no/STM8S-toolchain.git main
+git fetch https://github.com/spseol/STM8-toolchain.git main
 python3 -I -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD
 ```
 

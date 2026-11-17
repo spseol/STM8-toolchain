@@ -216,7 +216,7 @@ it by itself when it finds an older project); without the editor run `make upgra
 does not have that target yet:
 
 ```bash
-git fetch https://gitlab.com/spseol/mit-no/STM8S-toolchain.git main
+git fetch https://github.com/spseol/STM8-toolchain.git main
 python3 -I -c "$(git show FETCH_HEAD:.make/upgrade.py)" FETCH_HEAD
 ```
 

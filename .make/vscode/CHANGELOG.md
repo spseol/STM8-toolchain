@@ -2,6 +2,15 @@
 
 All notable changes to this extension are documented here.
 
+## 1.0.4 17-11-2026
+
+### Changed
+
+- *New Project* and *Update Toolchain* download the toolchain from GitHub
+  (`https://github.com/spseol/STM8-toolchain.git`) instead of GitLab, and so does `make upgrade`.
+  The `upstream` remote of a new project points there too. A value of `stm8.toolchainUrl` set
+  by hand in your user settings is not changed.
+
 ## 1.0.3 13-11-2026
 
 ### Changed

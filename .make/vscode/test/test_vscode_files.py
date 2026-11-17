@@ -264,7 +264,7 @@ def test_package_json_declares_update_toolchain():
     assert "stm8.updateToolchain" not in hidden  # must be visible in the palette
     setting = package["contributes"]["configuration"]["properties"]["stm8.toolchainUrl"]
     assert setting["type"] == "string"
-    assert setting["default"] == "https://gitlab.com/spseol/mit-no/STM8S-toolchain.git"
+    assert setting["default"] == "https://github.com/spseol/STM8-toolchain.git"
     assert setting["description"]
     # a cloned project's .vscode/settings.json must not redirect the updater (it runs the downloaded upgrade.py);
     # "machine-overridable" would still let workspace/folder settings override it, only "machine" ignores them

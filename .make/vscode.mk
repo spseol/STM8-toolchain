@@ -39,7 +39,7 @@ vscode:
 
 .PHONY: upgrade
 
-STM8_TOOLCHAIN_URL ?= https://gitlab.com/spseol/mit-no/STM8S-toolchain.git
+STM8_TOOLCHAIN_URL ?= https://github.com/spseol/STM8-toolchain.git
 UPGRADE_ARGS ?=
 
 # update .make/ and the Makefile from the toolchain repository, run by the fetched upgrade.py;
