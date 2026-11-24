@@ -10,3 +10,4 @@ __pycache__
 !.make/cgdb/cgdbrc
 .make/vscode/*.vsix
 compile_commands.json
+.ccls

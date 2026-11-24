@@ -115,6 +115,7 @@ class Report:
     launch: str = "unchanged"  # "replaced" | "added" | "unchanged"
     backup: str = None  # copy of an untracked .vscode/launch.json
     gitignore_added: list = field(default_factory=list)
+    stale_removed: list = field(default_factory=list)  # tracked language server files deleted from the working tree
     notes: list = field(default_factory=list)
 
 
@@ -290,6 +291,26 @@ def _update_gitignore(project, ref, report):
         path.write_text(text + prefix + "\n".join(report.gitignore_added) + "\n")
 
 
+# Files that an old toolchain put into projects. make now generates .ccls and compile_commands.json;
+# a leftover compile_flags.txt (or a hand-written .ccls) makes ccls ignore compile_commands.json.
+STALE_LSP_FILES = ("compile_flags.txt", ".ccls")
+
+
+def _remove_stale_lsp_files(project, report):
+    """Delete the tracked STALE_LSP_FILES from the working tree (git restore brings them back); the
+    student removes them from git with the command in the report. An untracked compile_flags.txt is
+    only mentioned: nothing could bring it back."""
+    for name in STALE_LSP_FILES:
+        path = project / name
+        if not path.is_file():
+            continue
+        if _git_bytes(project, "ls-files", "--error-unmatch", name, check=False)[0] == 0:
+            path.unlink()
+            report.stale_removed.append(name)
+        elif name == "compile_flags.txt":
+            report.notes.append("compile_flags.txt makes ccls ignore compile_commands.json. Delete it.")
+
+
 def _save_backup(path):
     """Copy PATH to PATH.bak, PATH.bak.1, ... without overwriting anything; the first
     existing backup with the same content is reused. Returns the backup path."""
@@ -372,6 +393,7 @@ def upgrade(project, ref, switch=None):
     elif result != current:
         makefile.write_bytes(result)
     _update_gitignore(project, ref, report)
+    _remove_stale_lsp_files(project, report)
     _update_launch(project, ref, report)
     return report
 
@@ -399,6 +421,9 @@ def _summary(report):
     lines.append(f"launch.json: {report.launch}" + (f" (original saved as {report.backup})." if report.backup else "."))
     if report.gitignore_added:
         lines.append("Added to .gitignore: " + ", ".join(report.gitignore_added))
+    if report.stale_removed:
+        lines.append("Deleted " + ", ".join(report.stale_removed) + ": ccls reads them instead of "
+                     "compile_commands.json. make generates compile_commands.json and .ccls now.")
     lines += report.notes
     return lines
 
@@ -413,10 +438,14 @@ def _next_steps(report):
     # git restore cannot restore a launch.json that was not tracked: put the original back by hand
     tracked = ".make Makefile" + (" .vscode/launch.json" if not report.backup and report.launch != "added" else "")
     tracked += " .gitignore" if report.gitignore_added else ""
+    stale = " ".join(report.stale_removed)
+    tracked += " " + stale if stale else ""
     steps = ["Look at the changes:  git status --short   and   git diff -- Makefile"]
     if report.makefile == "conflict":
         steps.append("Resolve the conflict in Makefile: search for <<<<<<<, keep the lines you want, "
                      "delete the markers (<<<<<<<, =======, >>>>>>>).")
+    if stale:  # the deletion is staged by this, so `git add` below must not name the files again
+        steps.append(f"Remove the deleted files from git:  git rm --cached {stale}")
     steps.append("Check that the project still builds:  make")
     steps.append(f"All right? Keep the update:  git add {paths} && git commit -m \"toolchain update\"")
     undo = f"Something is wrong? Undo it all:  git restore {tracked} && git clean -fd -- .make"

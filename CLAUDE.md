@@ -77,7 +77,9 @@ Milis timer běží na TIM4 (viz `src/milis.c`). Printf přes UART1 se zapíná 
 
 ## IDE podpora
 
-`compile_commands.json` se generuje automaticky při `make` (přes `.make/compile_database_generator.py`). Slouží pro clangd/ccls LSP. `.ccls` konfiguruje ccls přímo.
+`make` (cíl `compile_commands.json`, skript `.make/compile_database_generator.py`) generuje `compile_commands.json` i `.ccls` pro clangd/ccls. Flagy jsou stejné jako v Makefile (`-D$(DEVICE)`, `-DF_CPU`, `-DSKIP_TRAPS`, `-Iinc`, verze SDCC přes `-D__SDCC_VERSION_*`, plus `-D__CLANG` a prázdné `__naked`/`__trap`, kterým clang nerozumí). SPL se bere z `../SPL` (nerozdělené zdroje, přehlednější v editoru), seznam souborů z `../SPLSPL/mk/$(DEVICE).mk`. Oba soubory jsou v `.gitignore`.
+- ccls: soubor z `compile_commands.json` dostane flagy odtud, ostatní (hlavičky, nový `.c`) z `.ccls`. Soubor `compile_flags.txt` v kořeni ccls přečte a `compile_commands.json` přebije (hlášení `'stm8s.h' file not found`). `make upgrade` ho proto smaže, pokud je v gitu (a smaže i `.ccls` z gitu); studentovi vypíše `git rm --cached`.
+- Generátor trackovaný `.ccls` nepřepíše (vypíše, jak ho z gitu vyřadit). Testy: `test/test_compile_db.py`.
 
 ## Formátování kódu
 

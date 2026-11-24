@@ -551,7 +551,7 @@ def test_main_exit_codes_and_json(tmp_path, monkeypatch, capsys):
     data = json.loads(out.splitlines()[-1])
     assert data["makefile"] == "merged"
     assert data["launch"] == "replaced"
-    assert set(data) == {"replaced", "removed", "makefile", "launch", "backup", "gitignore_added", "notes"}
+    assert set(data) == {"replaced", "removed", "makefile", "launch", "backup", "gitignore_added", "stale_removed", "notes"}
 
     dirty = prepared(tmp_path / "dirty", dirty=True)
     code, out, err = run_main(dirty, monkeypatch, capsys, "FETCH_HEAD")
@@ -787,3 +787,47 @@ def test_success_report_has_red_headline_in_a_terminal(tmp_path, monkeypatch, ca
     assert code == 0
     assert f"\x1b[1;31m{upgrade.NOTHING_COMMITTED}\x1b[0m" in out
     assert out.count("\x1b") == 2  # only the headline is red
+
+
+# --- stale language server files ---------------------------------------------------------------
+
+
+def test_upgrade_deletes_tracked_compile_flags_and_ccls(tmp_path):
+    """compile_flags.txt (and a hand-written .ccls) make ccls ignore compile_commands.json."""
+    project = prepared(tmp_path)
+    (project / "compile_flags.txt").write_text("-xc\n-I../SPL/inc\n")
+    (project / ".ccls").write_text("sdcc\n")
+    commit_all(project)
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    assert not (project / "compile_flags.txt").exists()
+    assert not (project / ".ccls").exists()
+    assert report.stale_removed == ["compile_flags.txt", ".ccls"]
+    assert "compile_flags.txt, .ccls" in "\n".join(upgrade._summary(report))
+    assert "git rm --cached compile_flags.txt .ccls" in "\n".join(upgrade._next_steps(report))
+    # `git restore` (the undo step) brings them back
+    git(project, "restore", "compile_flags.txt", ".ccls")
+    assert (project / ".ccls").read_text() == "sdcc\n"
+
+
+def test_upgrade_leaves_untracked_compile_flags_and_only_says_so(tmp_path):
+    project = prepared(tmp_path)
+    (project / "compile_flags.txt").write_text("-xc\n")
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    assert (project / "compile_flags.txt").read_text() == "-xc\n"
+    assert report.stale_removed == []
+    assert any("compile_flags.txt" in note for note in report.notes)
+
+
+def test_upgrade_leaves_untracked_ccls_alone(tmp_path):
+    """An untracked .ccls is the generated one."""
+    project = prepared(tmp_path)
+    (project / ".ccls").write_text("clang\n")
+    report = upgrade.upgrade(project, "FETCH_HEAD")
+    assert (project / ".ccls").read_text() == "clang\n"
+    assert report.stale_removed == []
+
+
+def test_upgrade_gitignore_gets_ccls(tmp_path):
+    project = prepared(tmp_path)
+    upgrade.upgrade(project, "FETCH_HEAD")
+    assert ".ccls" in (project / ".gitignore").read_text().splitlines()

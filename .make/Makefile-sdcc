@@ -278,8 +278,9 @@ $(OUTPUT_SPL_DIR_ELF):
 	$(MKDIR) -p $@
 
 
-compile_commands.json: $(SPL_SRC_DIR) $(PRJ_SRC_DIR)  Makefile
-	$(PYTHON) .make/compile_database_generator.py $(DEVICE) $(CC_ROOT)
+# compile_commands.json a .ccls pro language server (ccls, clangd); flagy podle tohoto Makefile
+compile_commands.json: $(SPL_SRC_DIR) $(PRJ_SRC_DIR) Makefile .make/compile_database_generator.py $(wildcard ../SPLSPL/mk/$(DEVICE).mk)
+	$(PYTHON) .make/compile_database_generator.py $(DEVICE) "$(CC_ROOT)" --flag=-DF_CPU=$(F_CPU) --flag=-DSKIP_TRAPS=$(SKIP_TRAPS)
 
 .PHONY: clean clean-spl-objects clean-spl-lib  cleanall
 
@@ -290,6 +291,7 @@ clean:
 	rm -Rf $(OUTPUT_DIR)
 	rm -Rf $(OUTPUT_DIR_ELF)
 	rm -f compile_commands.json
+	rm -f .ccls
 
 clean-spl: clean-spl-lib
 
