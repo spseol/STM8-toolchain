@@ -25,9 +25,9 @@ void swspi_init(void){
 // Odesílá 16bit dat MSB first, SPI mode, sama provádí manipulaci s CS
 void swspi_tx16(uint16_t data)
 {
-    uint16_t maska = 1 << 15;
+    uint16_t maska = 1U << 15;
 
-    HIGH(CS);
+    LOW(CS);
     while (maska) {
         if (maska & data) {
             HIGH(DIN);
